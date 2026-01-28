@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ercin/ssh-mcp/config.schema.json",
+  "title": "SSH MCP Server Configuration",
+  "description": "Configuration schema for SSH MCP server defining remote SSH connections and security settings",
+  "type": "object",
+  "required": ["servers"],
+  "properties": {
+    "servers": {
+      "type": "array",
+      "description": "List of SSH server configurations. Each server can be accessed via MCP tools.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/server"
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default settings applied to all servers unless overridden",
+      "properties": {
+        "timeouts": {
+          "$ref": "#/definitions/timeouts"
+        },
+        "connectionPool": {
+          "$ref": "#/definitions/connectionPool"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "server": {
+      "type": "object",
+      "description": "SSH server connection configuration",
+      "required": ["id", "host", "port", "username", "auth"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this server. Used in MCP tool calls to target specific servers.",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "minLength": 1,
+          "maxLength": 64,
+          "examples": ["prod-web-01", "dev-db", "staging-api"]
+        },
+        "host": {
+          "type": "string",
+          "description": "Hostname or IP address of the SSH server",
+          "minLength": 1,
+          "examples": ["192.168.1.100", "server.example.com", "ssh.internal.corp"]
+        },
+        "port": {
+          "type": "integer",
+          "description": "SSH port number",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 22
+        },
+        "username": {
+          "type": "string",
+          "description": "SSH username for authentication",
+          "minLength": 1,
+          "examples": ["ubuntu", "admin", "deploy"]
+        },
+        "auth": {
+          "type": "object",
+          "description": "Authentication method: either password or private key (mutually exclusive)",
+          "oneOf": [
+            {
+              "required": ["password"],
+              "properties": {
+                "password": {
+                  "type": "string",
+                  "description": "SSH password. WARNING: Store config file with 0600 permissions. Consider using SSH keys instead.",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "required": ["privateKey"],
+              "properties": {
+                "privateKey": {
+                  "type": "string",
+                  "description": "Absolute path to SSH private key file (e.g., ~/.ssh/id_rsa). File must have 0600 permissions.",
+                  "minLength": 1,
+                  "examples": ["/home/user/.ssh/id_rsa", "/home/user/.ssh/id_ed25519"]
+                },
+                "passphrase": {
+                  "type": "string",
+                  "description": "Optional passphrase for encrypted private key",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "timeouts": {
+          "$ref": "#/definitions/timeouts"
+        },
+        "connectionPool": {
+          "$ref": "#/definitions/connectionPool"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional human-readable description of this server",
+          "examples": ["Production web server", "Development database"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "timeouts": {
+      "type": "object",
+      "description": "Timeout configurations in seconds",
+      "properties": {
+        "connection": {
+          "type": "integer",
+          "description": "Maximum time to establish SSH connection (seconds)",
+          "minimum": 1,
+          "maximum": 300,
+          "default": 10
+        },
+        "command": {
+          "type": "integer",
+          "description": "Maximum time for command execution (seconds)",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 60
+        },
+        "idle": {
+          "type": "integer",
+          "description": "Maximum idle time before closing connection (seconds)",
+          "minimum": 60,
+          "maximum": 7200,
+          "default": 900
+        }
+      },
+      "additionalProperties": false
+    },
+    "connectionPool": {
+      "type": "object",
+      "description": "Connection pooling settings for reusing SSH connections",
+      "properties": {
+        "maxConnections": {
+          "type": "integer",
+          "description": "Maximum number of concurrent connections per server",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        },
+        "reuseConnections": {
+          "type": "boolean",
+          "description": "Whether to reuse existing connections for multiple commands",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

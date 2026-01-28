@@ -1,0 +1,56 @@
+{
+  "$schema": "./config.schema.json",
+  "servers": [
+    {
+      "id": "prod-web-01",
+      "host": "192.168.1.100",
+      "port": 22,
+      "username": "ubuntu",
+      "auth": {
+        "privateKey": "/home/user/.ssh/id_rsa"
+      },
+      "description": "Production web server - primary",
+      "timeouts": {
+        "connection": 10,
+        "command": 120,
+        "idle": 900
+      }
+    },
+    {
+      "id": "dev-db",
+      "host": "dev-database.internal.corp",
+      "port": 2222,
+      "username": "admin",
+      "auth": {
+        "privateKey": "/home/user/.ssh/id_ed25519",
+        "passphrase": "your-passphrase-here"
+      },
+      "description": "Development database server",
+      "connectionPool": {
+        "maxConnections": 2,
+        "reuseConnections": true
+      }
+    },
+    {
+      "id": "staging-api",
+      "host": "staging.example.com",
+      "port": 22,
+      "username": "deploy",
+      "auth": {
+        "password": "your-password-here"
+      },
+      "description": "Staging API server - password auth example (use SSH keys in production)"
+    }
+  ],
+  "defaults": {
+    "timeouts": {
+      "connection": 10,
+      "command": 60,
+      "idle": 900
+    },
+    "connectionPool": {
+      "maxConnections": 3,
+      "reuseConnections": true
+    }
+  }
+}
