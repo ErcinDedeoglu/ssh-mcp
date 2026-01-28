@@ -1,0 +1,103 @@
+/**
+ * TypeScript type definitions for SSH MCP configuration.
+ * These types match the JSON Schema defined in config.schema.json.
+ */
+
+/**
+ * Timeout configurations in seconds
+ */
+export interface Timeouts {
+  /** Maximum time to establish SSH connection (1-300 seconds, default: 10) */
+  connection?: number;
+  /** Maximum time for command execution (1-3600 seconds, default: 60) */
+  command?: number;
+  /** Maximum idle time before closing connection (60-7200 seconds, default: 900) */
+  idle?: number;
+}
+
+/**
+ * Connection pooling settings for reusing SSH connections
+ */
+export interface ConnectionPool {
+  /** Maximum number of concurrent connections per server (1-10, default: 3) */
+  maxConnections?: number;
+  /** Whether to reuse existing connections for multiple commands (default: true) */
+  reuseConnections?: boolean;
+}
+
+/**
+ * Password-based authentication
+ */
+export interface PasswordAuth {
+  /** SSH password. Config file must have 0600 permissions. */
+  password: string;
+}
+
+/**
+ * Private key-based authentication
+ */
+export interface PrivateKeyAuth {
+  /** Absolute path to SSH private key file */
+  privateKey: string;
+  /** Optional passphrase for encrypted private key */
+  passphrase?: string;
+}
+
+/**
+ * Authentication method: either password or private key (mutually exclusive)
+ */
+export type Auth = PasswordAuth | PrivateKeyAuth;
+
+/**
+ * SSH server connection configuration
+ */
+export interface ServerConfig {
+  /** Unique identifier for this server (alphanumeric, underscore, hyphen; 1-64 chars) */
+  id: string;
+  /** Hostname or IP address of the SSH server */
+  host: string;
+  /** SSH port number (1-65535, default: 22) */
+  port: number;
+  /** SSH username for authentication */
+  username: string;
+  /** Authentication method */
+  auth: Auth;
+  /** Server-specific timeout settings */
+  timeouts?: Timeouts;
+  /** Server-specific connection pool settings */
+  connectionPool?: ConnectionPool;
+  /** Optional human-readable description of this server */
+  description?: string;
+}
+
+/**
+ * Default settings applied to all servers unless overridden
+ */
+export interface Defaults {
+  timeouts?: Timeouts;
+  connectionPool?: ConnectionPool;
+}
+
+/**
+ * Main configuration structure for SSH MCP server
+ */
+export interface Config {
+  /** List of SSH server configurations */
+  servers: ServerConfig[];
+  /** Default settings applied to all servers */
+  defaults?: Defaults;
+}
+
+/**
+ * Type guard to check if auth is password-based
+ */
+export function isPasswordAuth(auth: Auth): auth is PasswordAuth {
+  return 'password' in auth;
+}
+
+/**
+ * Type guard to check if auth is private key-based
+ */
+export function isPrivateKeyAuth(auth: Auth): auth is PrivateKeyAuth {
+  return 'privateKey' in auth;
+}
