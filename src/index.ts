@@ -5,17 +5,29 @@
  * Entry point for the MCP server providing SSH connection management
  */
 
-export async function main() {
-  // TODO: Initialize MCP server
-  // TODO: Register tools
-  // TODO: Start server
-  console.log('SSH MCP Server - Placeholder');
+import { loadConfig } from './config/loader.js';
+import { SSHMCPServer } from './server.js';
+
+let server: SSHMCPServer | null = null;
+
+async function shutdown(): Promise<void> {
+  if (server) {
+    await server.shutdown();
+  }
+  process.exit(0);
+}
+
+export async function main(): Promise<void> {
+  const config = loadConfig();
+  server = new SSHMCPServer(config);
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+
+  await server.run();
 }
 
 // Run if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
-}
+main().catch(() => {
+  process.exit(1);
+});

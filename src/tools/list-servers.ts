@@ -1,9 +1,6 @@
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
 import type { ConnectionPool } from '../ssh/pool.js';
-
-export const listServersInputSchema = z.object({}).describe('No input required');
 
 export interface ServerInfo {
   id: string;
@@ -19,10 +16,9 @@ export function registerListServersTool(
   config: Config,
   pool: ConnectionPool
 ): void {
-  server.tool(
+  ((server as any).tool as Function)(
     'list_servers',
     'List all configured SSH servers with their connection status',
-    listServersInputSchema.shape,
     async () => {
       const servers: ServerInfo[] = config.servers.map((serverConfig) => ({
         id: serverConfig.id,

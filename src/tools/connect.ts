@@ -5,20 +5,17 @@ import { ConnectionPool } from '../ssh/pool.js';
 import { SessionKeeper } from '../ssh/session.js';
 import { sanitizeError } from './utils.js';
 
-export const connectInputSchema = z.object({
-  serverId: z.string().describe('Unique identifier of the server to connect to'),
-});
-
 export function registerConnectTool(
   server: McpServer,
   config: Config,
   pool: ConnectionPool
 ): void {
-  server.tool(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.tool as any)(
     'connect',
     'Connect to an SSH server. Reuses existing connection if already connected.',
-    connectInputSchema.shape,
-    async ({ serverId }) => {
+    { serverId: z.string().describe('Unique identifier of the server to connect to') },
+    async ({ serverId }: { serverId: string }) => {
       try {
         if (pool.has(serverId)) {
           const existingSession = pool.get(serverId);

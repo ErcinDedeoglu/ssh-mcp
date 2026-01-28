@@ -4,21 +4,20 @@ import { ConnectionPool } from '../ssh/pool.js';
 import { FileTransfer, MAX_FILE_SIZE } from '../ssh/sftp.js';
 import { sanitizeError, sanitizePath } from './utils.js';
 
-export const downloadInputSchema = z.object({
-  serverId: z.string().describe('Unique identifier of the server to download from'),
-  remotePath: z.string().describe('Path to the file on the remote server (supports ~ for home directory)'),
-  localPath: z.string().describe('Absolute path where the file should be saved locally'),
-});
-
 export function registerDownloadTool(
   server: McpServer,
   pool: ConnectionPool
 ): void {
-  server.tool(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.tool as any)(
     'download',
     `Download a file from a connected SSH server via SFTP. Maximum file size: ${MAX_FILE_SIZE / 1024 / 1024}MB`,
-    downloadInputSchema.shape,
-    async ({ serverId, remotePath, localPath }) => {
+    {
+      serverId: z.string().describe('Unique identifier of the server to download from'),
+      remotePath: z.string().describe('Path to the file on the remote server (supports ~ for home directory)'),
+      localPath: z.string().describe('Absolute path where the file should be saved locally'),
+    },
+    async ({ serverId, remotePath, localPath }: { serverId: string; remotePath: string; localPath: string }) => {
       try {
         const session = pool.get(serverId);
         if (!session) {

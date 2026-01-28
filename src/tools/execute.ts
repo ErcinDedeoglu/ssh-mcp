@@ -7,12 +7,6 @@ import { sanitizeError } from './utils.js';
 const DEFAULT_COMMAND_TIMEOUT_SECONDS = 60;
 const MS_PER_SECOND = 1000;
 
-export const executeInputSchema = z.object({
-  serverId: z.string().describe('Unique identifier of the server to execute command on'),
-  command: z.string().describe('Shell command to execute on the remote server'),
-  timeout: z.number().optional().describe('Command timeout in seconds (overrides server config)'),
-});
-
 export interface ExecuteResult {
   stdout: string;
   stderr: string;
@@ -24,11 +18,16 @@ export function registerExecuteTool(
   config: Config,
   pool: ConnectionPool
 ): void {
-  server.tool(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.tool as any)(
     'execute',
     'Execute a shell command on a connected SSH server',
-    executeInputSchema.shape,
-    async ({ serverId, command, timeout }) => {
+    {
+      serverId: z.string().describe('Unique identifier of the server to execute command on'),
+      command: z.string().describe('Shell command to execute on the remote server'),
+      timeout: z.number().optional().describe('Command timeout in seconds (overrides server config)'),
+    },
+    async ({ serverId, command, timeout }: { serverId: string; command: string; timeout?: number }) => {
       try {
         const session = pool.get(serverId);
         if (!session) {
@@ -91,8 +90,12 @@ export function registerExecuteTool(
   );
 }
 
+interface ExecStream extends NodeJS.ReadableStream {
+  stderr: NodeJS.ReadableStream;
+}
+
 function executeCommand(
-  client: { exec: (cmd: string, callback: (err: Error | undefined, stream: NodeJS.ReadableStream & { stderr: NodeJS.ReadableStream }) => void) => void },
+  client: { exec: (cmd: string, callback: (err: Error | undefined, stream: ExecStream) => void) => void },
   command: string,
   timeoutSeconds: number
 ): Promise<ExecuteResult> {

@@ -3,19 +3,16 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { sanitizeError } from './utils.js';
 
-export const disconnectInputSchema = z.object({
-  serverId: z.string().describe('Unique identifier of the server to disconnect from'),
-});
-
 export function registerDisconnectTool(
   server: McpServer,
   pool: ConnectionPool
 ): void {
-  server.tool(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.tool as any)(
     'disconnect',
     'Close an SSH connection to a server',
-    disconnectInputSchema.shape,
-    async ({ serverId }) => {
+    { serverId: z.string().describe('Unique identifier of the server to disconnect from') },
+    async ({ serverId }: { serverId: string }) => {
       try {
         if (!pool.has(serverId)) {
           return {
