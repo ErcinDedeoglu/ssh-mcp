@@ -58,7 +58,11 @@ function getMockClient(index = 0): EventEmitter & {
   };
 }
 
-type ToolHandler = (...args: unknown[]) => unknown;
+interface ToolResult {
+  content: Array<{ type: string; text: string }>;
+  isError?: boolean;
+}
+type ToolHandler = (...args: unknown[]) => Promise<ToolResult>;
 type ErrorCallback = (err: Error | null, result?: unknown) => void;
 type ExecCallback = (err: Error | null, stream?: EventEmitter & { stderr: EventEmitter }) => void;
 

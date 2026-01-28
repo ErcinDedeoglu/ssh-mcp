@@ -33,6 +33,7 @@ vi.mock('node:fs', () => ({
 }));
 
 import { SSHConnection } from '../../src/ssh/connection.js';
+import { SessionKeeper } from '../../src/ssh/session.js';
 import { ConnectionPool } from '../../src/ssh/pool.js';
 
 function clearMockInstances(): void {
@@ -318,7 +319,7 @@ describe('ConnectionPool', () => {
 
   describe('Add and Get', () => {
     it('stores connection in pool', async () => {
-      const connection = new SSHConnection(serverConfig1);
+      const connection = new SessionKeeper(serverConfig1);
       const mockClient = getMockClient();
 
       const connectPromise = connection.connect();
@@ -331,7 +332,7 @@ describe('ConnectionPool', () => {
     });
 
     it('retrieves existing connection from pool', async () => {
-      const connection = new SSHConnection(serverConfig1);
+      const connection = new SessionKeeper(serverConfig1);
       const mockClient = getMockClient();
 
       const connectPromise = connection.connect();
@@ -350,8 +351,8 @@ describe('ConnectionPool', () => {
     });
 
     it('stores multiple connections', async () => {
-      const conn1 = new SSHConnection(serverConfig1);
-      const conn2 = new SSHConnection(serverConfig2);
+      const conn1 = new SessionKeeper(serverConfig1);
+      const conn2 = new SessionKeeper(serverConfig2);
       const mock1 = getMockClient(0);
       const mock2 = getMockClient(1);
 
@@ -374,7 +375,7 @@ describe('ConnectionPool', () => {
 
   describe('Remove', () => {
     it('removes connection from pool', async () => {
-      const connection = new SSHConnection(serverConfig1);
+      const connection = new SessionKeeper(serverConfig1);
       const mockClient = getMockClient();
 
       const connectPromise = connection.connect();
@@ -389,7 +390,7 @@ describe('ConnectionPool', () => {
     });
 
     it('disconnects connection when removing', async () => {
-      const connection = new SSHConnection(serverConfig1);
+      const connection = new SessionKeeper(serverConfig1);
       const mockClient = getMockClient();
 
       const connectPromise = connection.connect();
@@ -409,8 +410,8 @@ describe('ConnectionPool', () => {
 
   describe('Clear', () => {
     it('removes all connections from pool', async () => {
-      const conn1 = new SSHConnection(serverConfig1);
-      const conn2 = new SSHConnection(serverConfig2);
+      const conn1 = new SessionKeeper(serverConfig1);
+      const conn2 = new SessionKeeper(serverConfig2);
       const mock1 = getMockClient(0);
       const mock2 = getMockClient(1);
 
@@ -431,8 +432,8 @@ describe('ConnectionPool', () => {
     });
 
     it('disconnects all connections when clearing', async () => {
-      const conn1 = new SSHConnection(serverConfig1);
-      const conn2 = new SSHConnection(serverConfig2);
+      const conn1 = new SessionKeeper(serverConfig1);
+      const conn2 = new SessionKeeper(serverConfig2);
       const mock1 = getMockClient(0);
       const mock2 = getMockClient(1);
 
@@ -456,7 +457,6 @@ describe('ConnectionPool', () => {
 
   describe('Auto-remove on disconnect', () => {
     it('keeps connection in pool during reconnection attempts', async () => {
-      const { SessionKeeper } = await import('../../src/ssh/session.js');
       const session = new SessionKeeper(serverConfig1);
       const mockClient = getMockClient();
 

@@ -127,7 +127,7 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.fastPut.mockImplementation(
-          (local: string, remote: string, cb: (err: Error | null) => void) => {
+          (_local: string, _remote: string, cb: (err: Error | null) => void) => {
             setImmediate(() => cb(null));
           }
         );
@@ -171,8 +171,8 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.fastPut.mockImplementation(
-          (local: string, remote: string, cb: (err: Error | null) => void) => {
-            capturedRemotePath = remote;
+          (_local: string, _remote: string, cb: (err: Error | null) => void) => {
+            capturedRemotePath = _remote;
             setImmediate(() => cb(null));
           }
         );
@@ -191,8 +191,8 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.fastPut.mockImplementation(
-          (local: string, remote: string, cb: (err: Error | null) => void) => {
-            capturedRemotePath = remote;
+          (_local: string, _remote: string, cb: (err: Error | null) => void) => {
+            capturedRemotePath = _remote;
             setImmediate(() => cb(null));
           }
         );
@@ -223,7 +223,7 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.fastPut.mockImplementation(
-          (local: string, remote: string, cb: (err: Error | null) => void) => {
+          (_local: string, _remote: string, cb: (err: Error | null) => void) => {
             const err = new Error('Permission denied') as Error & { code?: string };
             err.code = 'EACCES';
             setImmediate(() => cb(err));
@@ -249,7 +249,7 @@ describe('FileTransfer', () => {
         let firstAttempt = true;
 
         sftpWrapper.fastPut.mockImplementation(
-          (local: string, remote: string, cb: (err: Error | null) => void) => {
+          (_local: string, _remote: string, cb: (err: Error | null) => void) => {
             if (firstAttempt) {
               firstAttempt = false;
               const err = new Error('No such file') as Error & { code?: string };
@@ -262,9 +262,9 @@ describe('FileTransfer', () => {
         );
 
         sftpWrapper.mkdir.mockImplementation(
-          (path: string, opts: { mode: number } | ((err: Error | null) => void), cb?: (err: Error | null) => void) => {
+          (_path: string, opts: { mode: number } | ((err: Error | null) => void), cb?: (err: Error | null) => void) => {
             mkdirCalled = true;
-            mkdirPath = path;
+            mkdirPath = _path;
             const callback = typeof opts === 'function' ? opts : cb!;
             setImmediate(() => callback(null));
           }
@@ -287,12 +287,12 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.stat.mockImplementation(
-          (path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
+          (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
             setImmediate(() => cb(null, { size: 1024 }));
           }
         );
         sftpWrapper.fastGet.mockImplementation(
-          (remote: string, local: string, cb: (err: Error | null) => void) => {
+          (_remote: string, _local: string, cb: (err: Error | null) => void) => {
             setImmediate(() => cb(null));
           }
         );
@@ -309,7 +309,7 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.stat.mockImplementation(
-          (path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
+          (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
             const err = new Error('No such file') as Error & { code?: string };
             err.code = 'ENOENT';
             setImmediate(() => cb(err, null));
@@ -330,7 +330,7 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.stat.mockImplementation(
-          (path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
+          (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
             setImmediate(() => cb(null, { size: MAX_FILE_SIZE + 1 }));
           }
         );
@@ -350,13 +350,13 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.stat.mockImplementation(
-          (path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
-            capturedRemotePath = path;
+          (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
+            capturedRemotePath = _path;
             setImmediate(() => cb(null, { size: 1024 }));
           }
         );
         sftpWrapper.fastGet.mockImplementation(
-          (remote: string, local: string, cb: (err: Error | null) => void) => {
+          (_remote: string, _local: string, cb: (err: Error | null) => void) => {
             setImmediate(() => cb(null));
           }
         );
@@ -375,13 +375,13 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.stat.mockImplementation(
-          (path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
-            capturedRemotePath = path;
+          (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
+            capturedRemotePath = _path;
             setImmediate(() => cb(null, { size: 1024 }));
           }
         );
         sftpWrapper.fastGet.mockImplementation(
-          (remote: string, local: string, cb: (err: Error | null) => void) => {
+          (_remote: string, _local: string, cb: (err: Error | null) => void) => {
             setImmediate(() => cb(null));
           }
         );
@@ -399,12 +399,12 @@ describe('FileTransfer', () => {
       mockClient.sftp.mockImplementation((callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.stat.mockImplementation(
-          (path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
+          (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
             setImmediate(() => cb(null, { size: 1024 }));
           }
         );
         sftpWrapper.fastGet.mockImplementation(
-          (remote: string, local: string, cb: (err: Error | null) => void) => {
+          (_remote: string, _local: string, cb: (err: Error | null) => void) => {
             const err = new Error('Permission denied') as Error & { code?: string };
             err.code = 'EACCES';
             setImmediate(() => cb(err));
