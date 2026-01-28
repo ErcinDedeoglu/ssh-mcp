@@ -1,18 +1,20 @@
-import type { SSHConnection } from './connection.js';
+import type { SessionKeeper } from './session.js';
 
 export class ConnectionPool {
-  private readonly connections = new Map<string, SSHConnection>();
+  private readonly connections = new Map<string, SessionKeeper>();
 
-  add(connection: SSHConnection): void {
+  add(connection: SessionKeeper): void {
     const serverId = connection.id;
     this.connections.set(serverId, connection);
     
-    connection.on('disconnected', () => {
+    // Only remove from pool when max retries reached (permanent disconnection)
+    // Don't remove during reconnection attempts
+    connection.on('max-retries-reached', () => {
       this.connections.delete(serverId);
     });
   }
 
-  get(serverId: string): SSHConnection | undefined {
+  get(serverId: string): SessionKeeper | undefined {
     return this.connections.get(serverId);
   }
 

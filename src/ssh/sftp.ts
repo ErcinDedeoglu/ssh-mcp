@@ -1,14 +1,14 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { SFTPWrapper } from 'ssh2';
-import type { SSHConnection } from './connection.js';
+import type { SessionKeeper } from './session.js';
 
 export const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 export class FileTransfer {
-  private readonly connection: SSHConnection;
+  private readonly connection: SessionKeeper;
 
-  constructor(connection: SSHConnection) {
+  constructor(connection: SessionKeeper) {
     this.connection = connection;
   }
 

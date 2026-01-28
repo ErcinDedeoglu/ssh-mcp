@@ -77,6 +77,10 @@ export class SessionKeeper extends EventEmitter {
     return this.sshClient;
   }
 
+  get username(): string {
+    return this.config.username;
+  }
+
   get lastActivity(): number {
     return this._lastActivity;
   }

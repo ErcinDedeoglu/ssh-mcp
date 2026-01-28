@@ -450,15 +450,33 @@ describe('ConnectionPool', () => {
   });
 
   describe('Auto-remove on disconnect', () => {
-    it('removes connection from pool on close event', async () => {
-      const connection = new SSHConnection(serverConfig1);
+    it('keeps connection in pool during reconnection attempts', async () => {
+      const { SessionKeeper } = await import('../../src/ssh/session.js');
+      const session = new SessionKeeper(serverConfig1);
       const mockClient = getMockClient();
 
-      const connectPromise = connection.connect();
+      const connectPromise = session.connect();
       setImmediate(() => mockClient.emit('ready'));
       await connectPromise;
 
-      pool.add(connection);
+      pool.add(session);
+      expect(pool.has('server-1')).toBe(true);
+
+      mockClient.emit('close');
+
+      expect(pool.has('server-1')).toBe(true);
+    });
+
+    it('removes connection from pool when max retries reached', async () => {
+      const { SessionKeeper } = await import('../../src/ssh/session.js');
+      const session = new SessionKeeper(serverConfig1, { maxReconnectAttempts: 0 });
+      const mockClient = getMockClient();
+
+      const connectPromise = session.connect();
+      setImmediate(() => mockClient.emit('ready'));
+      await connectPromise;
+
+      pool.add(session);
       expect(pool.has('server-1')).toBe(true);
 
       mockClient.emit('close');
