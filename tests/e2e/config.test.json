@@ -1,0 +1,32 @@
+{
+  "$schema": "../../config.schema.json",
+  "servers": [
+    {
+      "id": "test-server-1",
+      "host": "localhost",
+      "port": 2222,
+      "username": "testuser",
+      "auth": {
+        "password": "testpass123"
+      },
+      "description": "Test SSH Server 1"
+    },
+    {
+      "id": "test-server-2",
+      "host": "localhost",
+      "port": 2223,
+      "username": "admin",
+      "auth": {
+        "password": "admin456"
+      },
+      "description": "Test SSH Server 2"
+    }
+  ],
+  "defaults": {
+    "timeouts": {
+      "connection": 10,
+      "command": 30,
+      "idle": 300
+    }
+  }
+}

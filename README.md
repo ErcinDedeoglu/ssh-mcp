@@ -187,14 +187,21 @@ See [SECURITY.md](./SECURITY.md) for:
 # Install dependencies
 npm install
 
-# Run tests
+# Run unit tests
 npm test
+
+# Run E2E tests (requires Docker - handles setup/cleanup automatically)
+npm run test:e2e
+
+# Run all tests
+npm run test:all
 
 # Build
 npm run build
 
-# Lint
+# Lint & typecheck
 npm run lint
+npm run typecheck
 ```
 
 ## License

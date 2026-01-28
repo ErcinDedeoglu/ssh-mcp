@@ -34,26 +34,45 @@ export class FileTransfer {
     });
   }
 
-  private formatError(err: Error & { code?: string }, operation: string): Error {
-    if (err.code === 'ENOENT') {
+  private isNoSuchFileError(err: Error & { code?: number | string }): boolean {
+    return err.code === 2 || err.code === 'ENOENT';
+  }
+
+  private formatError(err: Error & { code?: number | string }, operation: string): Error {
+    if (this.isNoSuchFileError(err)) {
       return new Error(`File not found: ${err.message}`);
     }
-    if (err.code === 'EACCES') {
+    if (err.code === 3 || err.code === 'EACCES') {
       return new Error(`Permission denied: ${err.message}`);
     }
     return new Error(`${operation} failed: ${err.message}`);
   }
 
-  private mkdirRecursive(sftp: SFTPWrapper, dirPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      sftp.mkdir(dirPath, (err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve();
+  private async mkdirRecursive(sftp: SFTPWrapper, dirPath: string): Promise<void> {
+    const parts = dirPath.split('/').filter(Boolean);
+    let currentPath = '';
+
+    for (const part of parts) {
+      currentPath += '/' + part;
+      
+      const exists = await new Promise<boolean>((resolve) => {
+        sftp.stat(currentPath, (err) => {
+          resolve(!err);
+        });
       });
-    });
+
+      if (!exists) {
+        await new Promise<void>((resolve, reject) => {
+          sftp.mkdir(currentPath, (err) => {
+            if (err && (err as NodeJS.ErrnoException).code !== 'EEXIST') {
+              reject(err);
+              return;
+            }
+            resolve();
+          });
+        });
+      }
+    }
   }
 
   async upload(localPath: string, remotePath: string): Promise<void> {
@@ -72,15 +91,15 @@ export class FileTransfer {
     return new Promise((resolve, reject) => {
       sftp.fastPut(localPath, expandedRemotePath, (err) => {
         if (err) {
-          const sftpErr = err as Error & { code?: string };
+          const sftpErr = err as Error & { code?: number | string };
 
-          if (sftpErr.code === 'ENOENT') {
+          if (this.isNoSuchFileError(sftpErr)) {
             const remoteDir = path.dirname(expandedRemotePath);
             this.mkdirRecursive(sftp, remoteDir)
               .then(() => {
                 sftp.fastPut(localPath, expandedRemotePath, (retryErr) => {
                   if (retryErr) {
-                    reject(this.formatError(retryErr as Error & { code?: string }, 'Upload'));
+                    reject(this.formatError(retryErr as Error & { code?: number | string }, 'Upload'));
                     return;
                   }
                   resolve();
@@ -107,8 +126,8 @@ export class FileTransfer {
     const remoteStats = await new Promise<{ size: number }>((resolve, reject) => {
       sftp.stat(expandedRemotePath, (err, stats) => {
         if (err) {
-          const sftpErr = err as Error & { code?: string };
-          if (sftpErr.code === 'ENOENT') {
+          const sftpErr = err as Error & { code?: number | string };
+          if (this.isNoSuchFileError(sftpErr)) {
             reject(new Error(`Remote file not found: ${expandedRemotePath}`));
             return;
           }
@@ -126,7 +145,7 @@ export class FileTransfer {
     return new Promise((resolve, reject) => {
       sftp.fastGet(expandedRemotePath, localPath, (err) => {
         if (err) {
-          reject(this.formatError(err as Error & { code?: string }, 'Download'));
+          reject(this.formatError(err as Error & { code?: number | string }, 'Download'));
           return;
         }
         resolve();
