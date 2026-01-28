@@ -1,18 +1,24 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Config, ServerConfig, PasswordAuth } from '../../src/config/types.js';
 
-vi.mock('ssh2', () => {
-  const { EventEmitter } = require('node:events');
-  return {
-    Client: class MockClient extends EventEmitter {
-      connect = vi.fn();
-      end = vi.fn();
-      destroy = vi.fn();
-      exec = vi.fn();
-      sftp = vi.fn();
-    },
-  };
+const { MockClient } = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { EventEmitter } = require('node:events') as typeof import('node:events');
+  
+  class MockClient extends EventEmitter {
+    connect = vi.fn();
+    end = vi.fn();
+    destroy = vi.fn();
+    exec = vi.fn();
+    sftp = vi.fn();
+  }
+  
+  return { MockClient };
 });
+
+vi.mock('ssh2', () => ({
+  Client: MockClient,
+}));
 
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(() => 'fake-private-key-content'),

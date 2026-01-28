@@ -19,23 +19,28 @@ class MockSFTPWrapper extends EventEmitter {
   }
 }
 
-vi.mock('ssh2', () => {
-  const { EventEmitter } = require('node:events');
+const { MockClient } = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { EventEmitter } = require('node:events') as typeof import('node:events');
+  
+  class MockClient extends EventEmitter {
+    connect = vi.fn();
+    end = vi.fn();
+    destroy = vi.fn();
+    sftp = vi.fn();
 
-  return {
-    Client: class MockClient extends EventEmitter {
-      connect = vi.fn();
-      end = vi.fn();
-      destroy = vi.fn();
-      sftp = vi.fn();
-
-      constructor() {
-        super();
-        mockClientInstances.push(this);
-      }
-    },
-  };
+    constructor() {
+      super();
+      mockClientInstances.push(this);
+    }
+  }
+  
+  return { MockClient };
 });
+
+vi.mock('ssh2', () => ({
+  Client: MockClient,
+}));
 
 // Mock node:fs for file size checks
 vi.mock('node:fs', () => ({

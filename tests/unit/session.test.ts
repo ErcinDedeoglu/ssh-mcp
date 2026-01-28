@@ -4,22 +4,27 @@ import type { ServerConfig, PasswordAuth } from '../../src/config/types.js';
 
 const mockInstances: EventEmitter[] = [];
 
-vi.mock('ssh2', () => {
-  const { EventEmitter } = require('node:events');
+const { MockClient } = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { EventEmitter } = require('node:events') as typeof import('node:events');
   
-  return {
-    Client: class MockClient extends EventEmitter {
-      connect = vi.fn();
-      end = vi.fn();
-      destroy = vi.fn();
-      
-      constructor() {
-        super();
-        mockInstances.push(this);
-      }
-    },
-  };
+  class MockClient extends EventEmitter {
+    connect = vi.fn();
+    end = vi.fn();
+    destroy = vi.fn();
+    
+    constructor() {
+      super();
+      mockInstances.push(this);
+    }
+  }
+  
+  return { MockClient };
 });
+
+vi.mock('ssh2', () => ({
+  Client: MockClient,
+}));
 
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(() => 'fake-private-key-content'),

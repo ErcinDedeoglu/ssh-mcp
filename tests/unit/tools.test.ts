@@ -1,29 +1,36 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
+import { homedir } from 'node:os';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config, ServerConfig, PasswordAuth } from '../../src/config/types.js';
 import { ConnectionPool } from '../../src/ssh/pool.js';
 import { sanitizeError, sanitizePath } from '../../src/tools/utils.js';
 
 const mockInstances: EventEmitter[] = [];
 
-vi.mock('ssh2', () => {
-  const { EventEmitter } = require('node:events');
+const { MockClient } = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { EventEmitter } = require('node:events') as typeof import('node:events');
   
-  return {
-    Client: class MockClient extends EventEmitter {
-      connect = vi.fn();
-      end = vi.fn();
-      destroy = vi.fn();
-      exec = vi.fn();
-      sftp = vi.fn();
-      
-      constructor() {
-        super();
-        mockInstances.push(this);
-      }
-    },
-  };
+  class MockClient extends EventEmitter {
+    connect = vi.fn();
+    end = vi.fn();
+    destroy = vi.fn();
+    exec = vi.fn();
+    sftp = vi.fn();
+    
+    constructor() {
+      super();
+      mockInstances.push(this);
+    }
+  }
+  
+  return { MockClient };
 });
+
+vi.mock('ssh2', () => ({
+  Client: MockClient,
+}));
 
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(() => 'fake-private-key-content'),
@@ -51,13 +58,23 @@ function getMockClient(index = 0): EventEmitter & {
   };
 }
 
-function createMockServer() {
-  const registeredTools = new Map<string, { config: object; handler: Function }>();
+type ToolHandler = (...args: unknown[]) => unknown;
+type ErrorCallback = (err: Error | null, result?: unknown) => void;
+type ExecCallback = (err: Error | null, stream?: EventEmitter & { stderr: EventEmitter }) => void;
+
+interface MockServer {
+  tool: ReturnType<typeof vi.fn>;
+  getToolHandler: (name: string) => ToolHandler | undefined;
+  getToolConfig: (name: string) => object | undefined;
+}
+
+function createMockServer(): MockServer {
+  const registeredTools = new Map<string, { config: object; handler: ToolHandler }>();
   
   return {
     tool: vi.fn((...args: unknown[]) => {
       const name = args[0] as string;
-      const handler = args[args.length - 1] as Function;
+      const handler = args[args.length - 1] as ToolHandler;
       let config: object;
       if (args.length === 3) {
         config = typeof args[1] === 'string' 
@@ -111,7 +128,7 @@ describe('MCP Tools', () => {
 
   describe('sanitizeError', () => {
     it('replaces home directory with ~', () => {
-      const homeDir = require('node:os').homedir();
+      const homeDir = homedir();
       const error = new Error(`File not found: ${homeDir}/secret/file.txt`);
       const sanitized = sanitizeError(error);
       expect(sanitized).toBe('File not found: ~/secret/file.txt');
@@ -155,7 +172,7 @@ describe('MCP Tools', () => {
 
   describe('sanitizePath', () => {
     it('replaces home directory with ~', () => {
-      const homeDir = require('node:os').homedir();
+      const homeDir = homedir();
       const path = `${homeDir}/documents/file.txt`;
       const sanitized = sanitizePath(path);
       expect(sanitized).toBe('~/documents/file.txt');
@@ -173,7 +190,7 @@ describe('MCP Tools', () => {
       const { registerListServersTool } = await import('../../src/tools/list-servers.js');
       
       const mockServer = createMockServer();
-      registerListServersTool(mockServer as any, config, pool);
+      registerListServersTool(mockServer as unknown as McpServer, config, pool);
 
       expect(mockServer.tool).toHaveBeenCalledWith(
         'list_servers',
@@ -207,7 +224,7 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       const mockServer = createMockServer();
-      registerListServersTool(mockServer as any, config, pool);
+      registerListServersTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('list_servers')!;
       const result = await handler({});
@@ -222,7 +239,7 @@ describe('MCP Tools', () => {
       const { registerConnectTool } = await import('../../src/tools/connect.js');
       
       const mockServer = createMockServer();
-      registerConnectTool(mockServer as any, config, pool);
+      registerConnectTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('connect')!;
       
@@ -251,7 +268,7 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       const mockServer = createMockServer();
-      registerConnectTool(mockServer as any, config, pool);
+      registerConnectTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('connect')!;
       const result = await handler({ serverId: 'test-server' });
@@ -264,7 +281,7 @@ describe('MCP Tools', () => {
       const { registerConnectTool } = await import('../../src/tools/connect.js');
       
       const mockServer = createMockServer();
-      registerConnectTool(mockServer as any, config, pool);
+      registerConnectTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('connect')!;
       const result = await handler({ serverId: 'unknown-server' });
@@ -287,7 +304,7 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       const mockServer = createMockServer();
-      registerDisconnectTool(mockServer as any, pool);
+      registerDisconnectTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('disconnect')!;
       const result = await handler({ serverId: 'test-server' });
@@ -301,7 +318,7 @@ describe('MCP Tools', () => {
       const { registerDisconnectTool } = await import('../../src/tools/disconnect.js');
       
       const mockServer = createMockServer();
-      registerDisconnectTool(mockServer as any, pool);
+      registerDisconnectTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('disconnect')!;
       const result = await handler({ serverId: 'unknown-server' });
@@ -323,7 +340,7 @@ describe('MCP Tools', () => {
       await connectPromise;
       pool.add(session);
 
-      mockClient.exec.mockImplementation((cmd: string, callback: Function) => {
+      mockClient.exec.mockImplementation((_cmd: string, callback: ExecCallback) => {
         const stream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
         stream.stderr = new EventEmitter();
         
@@ -333,11 +350,11 @@ describe('MCP Tools', () => {
           stream.emit('close', 0);
         });
         
-        callback(undefined, stream);
+        callback(null, stream);
       });
 
       const mockServer = createMockServer();
-      registerExecuteTool(mockServer as any, config, pool);
+      registerExecuteTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('execute')!;
       const result = await handler({ serverId: 'test-server', command: 'echo "Hello World"' });
@@ -359,14 +376,14 @@ describe('MCP Tools', () => {
       await connectPromise;
       pool.add(session);
 
-      mockClient.exec.mockImplementation((cmd: string, callback: Function) => {
+      mockClient.exec.mockImplementation((_cmd: string, callback: ExecCallback) => {
         const stream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
         stream.stderr = new EventEmitter();
-        callback(undefined, stream);
+        callback(null, stream);
       });
 
       const mockServer = createMockServer();
-      registerExecuteTool(mockServer as any, config, pool);
+      registerExecuteTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('execute')!;
       const resultPromise = handler({ serverId: 'test-server', command: 'sleep 100', timeout: 0.05 });
@@ -387,13 +404,13 @@ describe('MCP Tools', () => {
       await connectPromise;
       pool.add(session);
 
-      const homeDir = require('node:os').homedir();
-      mockClient.exec.mockImplementation((cmd: string, callback: Function) => {
+      const homeDir = homedir();
+      mockClient.exec.mockImplementation((_cmd: string, callback: ExecCallback) => {
         callback(new Error(`Failed at ${homeDir}/secret/script.sh with password=secret123`));
       });
 
       const mockServer = createMockServer();
-      registerExecuteTool(mockServer as any, config, pool);
+      registerExecuteTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('execute')!;
       const result = await handler({ serverId: 'test-server', command: 'test' });
@@ -409,7 +426,7 @@ describe('MCP Tools', () => {
       const { registerExecuteTool } = await import('../../src/tools/execute.js');
       
       const mockServer = createMockServer();
-      registerExecuteTool(mockServer as any, config, pool);
+      registerExecuteTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('execute')!;
       const result = await handler({ serverId: 'test-server', command: 'ls' });
@@ -432,16 +449,16 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       const mockSftp = {
-        fastPut: vi.fn((local: string, remote: string, callback: Function) => {
+        fastPut: vi.fn((_local: string, _remote: string, callback: ErrorCallback) => {
           callback(null);
         }),
       };
-      mockClient.sftp.mockImplementation((callback: Function) => {
+      mockClient.sftp.mockImplementation((callback: ErrorCallback) => {
         callback(null, mockSftp);
       });
 
       const mockServer = createMockServer();
-      registerUploadTool(mockServer as any, pool);
+      registerUploadTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('upload')!;
       const result = await handler({ 
@@ -472,7 +489,7 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       const mockServer = createMockServer();
-      registerUploadTool(mockServer as any, pool);
+      registerUploadTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('upload')!;
       const result = await handler({ 
@@ -499,19 +516,19 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       const mockSftp = {
-        stat: vi.fn((path: string, callback: Function) => {
+        stat: vi.fn((_path: string, callback: ErrorCallback) => {
           callback(null, { size: 1024 });
         }),
-        fastGet: vi.fn((remote: string, local: string, callback: Function) => {
+        fastGet: vi.fn((_remote: string, _local: string, callback: ErrorCallback) => {
           callback(null);
         }),
       };
-      mockClient.sftp.mockImplementation((callback: Function) => {
+      mockClient.sftp.mockImplementation((callback: ErrorCallback) => {
         callback(null, mockSftp);
       });
 
       const mockServer = createMockServer();
-      registerDownloadTool(mockServer as any, pool);
+      registerDownloadTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('download')!;
       const result = await handler({ 
@@ -536,16 +553,16 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       const mockSftp = {
-        stat: vi.fn((path: string, callback: Function) => {
+        stat: vi.fn((_path: string, callback: ErrorCallback) => {
           callback(null, { size: 200 * 1024 * 1024 });
         }),
       };
-      mockClient.sftp.mockImplementation((callback: Function) => {
+      mockClient.sftp.mockImplementation((callback: ErrorCallback) => {
         callback(null, mockSftp);
       });
 
       const mockServer = createMockServer();
-      registerDownloadTool(mockServer as any, pool);
+      registerDownloadTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('download')!;
       const result = await handler({ 
@@ -572,7 +589,7 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       const mockServer = createMockServer();
-      registerConnectionStatusTool(mockServer as any, pool);
+      registerConnectionStatusTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('connection_status')!;
       const result = await handler({ serverId: 'test-server' });
@@ -588,7 +605,7 @@ describe('MCP Tools', () => {
       const { registerConnectionStatusTool } = await import('../../src/tools/connection-status.js');
       
       const mockServer = createMockServer();
-      registerConnectionStatusTool(mockServer as any, pool);
+      registerConnectionStatusTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('connection_status')!;
       const result = await handler({ serverId: 'unknown-server' });
@@ -615,7 +632,7 @@ describe('MCP Tools', () => {
       await new Promise(resolve => setTimeout(resolve, 10));
 
       const mockServer = createMockServer();
-      registerConnectionStatusTool(mockServer as any, pool);
+      registerConnectionStatusTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('connection_status')!;
       const result = await handler({ serverId: 'test-server' });
