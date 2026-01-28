@@ -37,6 +37,10 @@ export class SSHConnection extends EventEmitter {
     return this.sshClient;
   }
 
+  get username(): string {
+    return this.config.username;
+  }
+
   private setupEventHandlers(): void {
     this.sshClient.on('close', () => {
       this.connected = false;
