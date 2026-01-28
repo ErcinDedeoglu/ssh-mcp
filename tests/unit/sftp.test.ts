@@ -49,7 +49,7 @@ vi.mock('node:fs', () => ({
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })), // 1KB default
 }));
 
-import { SSHConnection } from '../../src/ssh/connection.js';
+import { SessionKeeper } from '../../src/ssh/session.js';
 import { FileTransfer, MAX_FILE_SIZE } from '../../src/ssh/sftp.js';
 import * as fs from 'node:fs';
 
@@ -78,7 +78,7 @@ function getMockSftp(index = 0): MockSFTPWrapper {
 
 describe('FileTransfer', () => {
   let serverConfig: ServerConfig;
-  let connection: SSHConnection;
+  let connection: SessionKeeper;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -98,11 +98,11 @@ describe('FileTransfer', () => {
   });
 
   async function setupConnectedClient(): Promise<{
-    connection: SSHConnection;
+    connection: SessionKeeper;
     mockClient: ReturnType<typeof getMockClient>;
     mockSftp: MockSFTPWrapper;
   }> {
-    connection = new SSHConnection(serverConfig);
+    connection = new SessionKeeper(serverConfig);
     const mockClient = getMockClient();
 
     // Setup sftp mock to create MockSFTPWrapper
