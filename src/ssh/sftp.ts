@@ -4,12 +4,30 @@ import type { SFTPWrapper } from 'ssh2';
 import type { SessionKeeper } from './session.js';
 
 export const MAX_FILE_SIZE = 100 * 1024 * 1024;
+export const DEFAULT_TRANSFER_TIMEOUT_MS = 5 * 60 * 1000;
+
+export interface FileTransferOptions {
+  timeoutMs?: number;
+}
 
 export class FileTransfer {
   private readonly connection: SessionKeeper;
+  private readonly timeoutMs: number;
 
-  constructor(connection: SessionKeeper) {
+  constructor(connection: SessionKeeper, options: FileTransferOptions = {}) {
     this.connection = connection;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_TRANSFER_TIMEOUT_MS;
+  }
+
+  private withTimeout<T>(promise: Promise<T>, operation: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`${operation} timed out after ${this.timeoutMs}ms`));
+        }, this.timeoutMs);
+      }),
+    ]);
   }
 
   private expandRemotePath(remotePath: string): string {
@@ -88,35 +106,39 @@ export class FileTransfer {
     const expandedRemotePath = this.expandRemotePath(remotePath);
     const sftp = await this.getSftp();
 
-    return new Promise((resolve, reject) => {
-      sftp.fastPut(localPath, expandedRemotePath, (err) => {
-        if (err) {
-          const sftpErr = err as Error & { code?: number | string };
+    const doUpload = (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        sftp.fastPut(localPath, expandedRemotePath, (err) => {
+          if (err) {
+            const sftpErr = err as Error & { code?: number | string };
 
-          if (this.isNoSuchFileError(sftpErr)) {
-            const remoteDir = path.dirname(expandedRemotePath);
-            this.mkdirRecursive(sftp, remoteDir)
-              .then(() => {
-                sftp.fastPut(localPath, expandedRemotePath, (retryErr) => {
-                  if (retryErr) {
-                    reject(this.formatError(retryErr as Error & { code?: number | string }, 'Upload'));
-                    return;
-                  }
-                  resolve();
+            if (this.isNoSuchFileError(sftpErr)) {
+              const remoteDir = path.dirname(expandedRemotePath);
+              this.mkdirRecursive(sftp, remoteDir)
+                .then(() => {
+                  sftp.fastPut(localPath, expandedRemotePath, (retryErr) => {
+                    if (retryErr) {
+                      reject(this.formatError(retryErr as Error & { code?: number | string }, 'Upload'));
+                      return;
+                    }
+                    resolve();
+                  });
+                })
+                .catch(() => {
+                  reject(this.formatError(sftpErr, 'Upload'));
                 });
-              })
-              .catch(() => {
-                reject(this.formatError(sftpErr, 'Upload'));
-              });
+              return;
+            }
+
+            reject(this.formatError(sftpErr, 'Upload'));
             return;
           }
-
-          reject(this.formatError(sftpErr, 'Upload'));
-          return;
-        }
-        resolve();
+          resolve();
+        });
       });
-    });
+    };
+
+    return this.withTimeout(doUpload(), 'Upload');
   }
 
   async download(remotePath: string, localPath: string): Promise<void> {
@@ -142,14 +164,18 @@ export class FileTransfer {
       throw new Error(`File too large: ${remoteStats.size} bytes exceeds ${MAX_FILE_SIZE} byte limit`);
     }
 
-    return new Promise((resolve, reject) => {
-      sftp.fastGet(expandedRemotePath, localPath, (err) => {
-        if (err) {
-          reject(this.formatError(err as Error & { code?: number | string }, 'Download'));
-          return;
-        }
-        resolve();
+    const doDownload = (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        sftp.fastGet(expandedRemotePath, localPath, (err) => {
+          if (err) {
+            reject(this.formatError(err as Error & { code?: number | string }, 'Download'));
+            return;
+          }
+          resolve();
+        });
       });
-    });
+    };
+
+    return this.withTimeout(doDownload(), 'Download');
   }
 }

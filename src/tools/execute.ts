@@ -6,6 +6,7 @@ import { sanitizeError } from './utils.js';
 
 const DEFAULT_COMMAND_TIMEOUT_SECONDS = 60;
 const MS_PER_SECOND = 1000;
+const MAX_OUTPUT_SIZE = 10 * 1024 * 1024;
 
 export interface ExecuteResult {
   stdout: string;
@@ -92,6 +93,8 @@ export function registerExecuteTool(
 
 interface ExecStream extends NodeJS.ReadableStream {
   stderr: NodeJS.ReadableStream;
+  close: () => void;
+  destroy: () => void;
 }
 
 function executeCommand(
@@ -103,28 +106,50 @@ function executeCommand(
     const timeoutMs = timeoutSeconds * MS_PER_SECOND;
     let stdout = '';
     let stderr = '';
+    let stdoutSize = 0;
+    let stderrSize = 0;
     let settled = false;
+    let activeStream: ExecStream | null = null;
 
-    const timeoutId = setTimeout(() => {
+    const cleanup = (error: Error): void => {
       if (settled) return;
       settled = true;
-      reject(new Error(`Command timed out after ${timeoutSeconds} seconds`));
+      clearTimeout(timeoutId);
+      if (activeStream) {
+        activeStream.destroy();
+      }
+      reject(error);
+    };
+
+    const timeoutId = setTimeout(() => {
+      cleanup(new Error(`Command timed out after ${timeoutSeconds} seconds`));
     }, timeoutMs);
 
     client.exec(command, (err, stream) => {
       if (err) {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        reject(err);
+        cleanup(err);
         return;
       }
 
+      activeStream = stream;
+
       stream.on('data', (data: Buffer) => {
+        if (settled) return;
+        stdoutSize += data.length;
+        if (stdoutSize > MAX_OUTPUT_SIZE) {
+          cleanup(new Error(`Command output exceeded ${MAX_OUTPUT_SIZE} bytes limit`));
+          return;
+        }
         stdout += data.toString();
       });
 
       stream.stderr.on('data', (data: Buffer) => {
+        if (settled) return;
+        stderrSize += data.length;
+        if (stderrSize > MAX_OUTPUT_SIZE) {
+          cleanup(new Error(`Command stderr exceeded ${MAX_OUTPUT_SIZE} bytes limit`));
+          return;
+        }
         stderr += data.toString();
       });
 
@@ -140,10 +165,7 @@ function executeCommand(
       });
 
       stream.on('error', (streamErr: Error) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        reject(streamErr);
+        cleanup(streamErr);
       });
     });
   });

@@ -381,8 +381,9 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       mockClient.exec.mockImplementation((_cmd: string, callback: ExecCallback) => {
-        const stream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
+        const stream = new EventEmitter() as EventEmitter & { stderr: EventEmitter; destroy: () => void };
         stream.stderr = new EventEmitter();
+        stream.destroy = vi.fn();
         callback(null, stream);
       });
 

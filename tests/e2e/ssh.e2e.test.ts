@@ -254,4 +254,141 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
       session.disconnect();
     }, 10000);
   });
+
+  describe('Concurrent Commands', () => {
+    it('executes multiple commands simultaneously on same connection', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+
+      const commands = [
+        executeCommand(session.client, 'sleep 0.1 && echo "cmd1"'),
+        executeCommand(session.client, 'sleep 0.1 && echo "cmd2"'),
+        executeCommand(session.client, 'sleep 0.1 && echo "cmd3"'),
+      ];
+
+      const results = await Promise.all(commands);
+      expect(results[0].stdout.trim()).toBe('cmd1');
+      expect(results[1].stdout.trim()).toBe('cmd2');
+      expect(results[2].stdout.trim()).toBe('cmd3');
+      expect(results.every(r => r.exitCode === 0)).toBe(true);
+      session.disconnect();
+    });
+
+    it('handles mixed success and failure in concurrent commands', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+
+      const commands = [
+        executeCommand(session.client, 'echo "success"'),
+        executeCommand(session.client, 'exit 1'),
+        executeCommand(session.client, 'echo "also success"'),
+      ];
+
+      const results = await Promise.all(commands);
+      expect(results[0].exitCode).toBe(0);
+      expect(results[1].exitCode).toBe(1);
+      expect(results[2].exitCode).toBe(0);
+      session.disconnect();
+    });
+  });
+
+  describe('Binary File Transfer', () => {
+    const localBinaryFile = path.join(os.tmpdir(), 'ssh-mcp-test-binary.bin');
+    const localDownloadBinary = path.join(os.tmpdir(), 'ssh-mcp-test-binary-dl.bin');
+    const remoteBinaryFile = '/tmp/ssh-mcp-test-binary.bin';
+
+    afterAll(() => {
+      try { fs.unlinkSync(localBinaryFile); } catch { /* ignore */ }
+      try { fs.unlinkSync(localDownloadBinary); } catch { /* ignore */ }
+    });
+
+    it('uploads and downloads binary file correctly', async () => {
+      const binaryData = Buffer.alloc(1024);
+      for (let i = 0; i < binaryData.length; i++) {
+        binaryData[i] = i % 256;
+      }
+      fs.writeFileSync(localBinaryFile, binaryData);
+
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+      const fileTransfer = new FileTransfer(session);
+
+      await fileTransfer.upload(localBinaryFile, remoteBinaryFile);
+      await fileTransfer.download(remoteBinaryFile, localDownloadBinary);
+
+      const downloadedData = fs.readFileSync(localDownloadBinary);
+      expect(downloadedData.equals(binaryData)).toBe(true);
+
+      await executeCommand(session.client, `rm ${remoteBinaryFile}`);
+      session.disconnect();
+    });
+
+    it('handles empty file transfer', async () => {
+      const emptyFile = path.join(os.tmpdir(), 'ssh-mcp-empty.txt');
+      const emptyDownload = path.join(os.tmpdir(), 'ssh-mcp-empty-dl.txt');
+      const remoteEmpty = '/tmp/ssh-mcp-empty.txt';
+      fs.writeFileSync(emptyFile, '');
+
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+      const fileTransfer = new FileTransfer(session);
+
+      await fileTransfer.upload(emptyFile, remoteEmpty);
+      await fileTransfer.download(remoteEmpty, emptyDownload);
+
+      const downloaded = fs.readFileSync(emptyDownload, 'utf-8');
+      expect(downloaded).toBe('');
+
+      await executeCommand(session.client, `rm ${remoteEmpty}`);
+      fs.unlinkSync(emptyFile);
+      fs.unlinkSync(emptyDownload);
+      session.disconnect();
+    });
+  });
+
+  describe('Unicode and Special Characters', () => {
+    it('handles unicode in command output', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+      const result = await executeCommand(session.client, 'echo "Hello 世界 🚀 émojis"');
+      expect(result.stdout.trim()).toBe('Hello 世界 🚀 émojis');
+      session.disconnect();
+    });
+
+    it('handles special shell characters', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+      const result = await executeCommand(session.client, 'echo "quotes: \\"test\\" and $HOME"');
+      expect(result.stdout).toContain('quotes:');
+      expect(result.exitCode).toBe(0);
+      session.disconnect();
+    });
+
+    it('handles newlines and tabs in output', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+      const result = await executeCommand(session.client, 'printf "line1\\nline2\\ttabbed"');
+      expect(result.stdout).toBe('line1\nline2\ttabbed');
+      session.disconnect();
+    });
+
+    it('transfers file with unicode filename', async () => {
+      const unicodeFile = path.join(os.tmpdir(), 'ssh-mcp-日本語.txt');
+      const remoteUnicode = '/tmp/ssh-mcp-日本語.txt';
+      const content = 'Unicode content: 日本語テスト';
+      fs.writeFileSync(unicodeFile, content);
+
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+      const fileTransfer = new FileTransfer(session);
+
+      await fileTransfer.upload(unicodeFile, remoteUnicode);
+      const result = await executeCommand(session.client, `cat "${remoteUnicode}"`);
+      expect(result.stdout).toBe(content);
+
+      await executeCommand(session.client, `rm "${remoteUnicode}"`);
+      fs.unlinkSync(unicodeFile);
+      session.disconnect();
+    });
+  });
 });
