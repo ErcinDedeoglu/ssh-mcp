@@ -70,24 +70,25 @@ export class FileTransfer {
     const sftp = await this.getSftp();
 
     return new Promise((resolve, reject) => {
-      sftp.fastPut(localPath, expandedRemotePath, async (err) => {
+      sftp.fastPut(localPath, expandedRemotePath, (err) => {
         if (err) {
           const sftpErr = err as Error & { code?: string };
 
           if (sftpErr.code === 'ENOENT') {
             const remoteDir = path.dirname(expandedRemotePath);
-            try {
-              await this.mkdirRecursive(sftp, remoteDir);
-              sftp.fastPut(localPath, expandedRemotePath, (retryErr) => {
-                if (retryErr) {
-                  reject(this.formatError(retryErr as Error & { code?: string }, 'Upload'));
-                  return;
-                }
-                resolve();
+            this.mkdirRecursive(sftp, remoteDir)
+              .then(() => {
+                sftp.fastPut(localPath, expandedRemotePath, (retryErr) => {
+                  if (retryErr) {
+                    reject(this.formatError(retryErr as Error & { code?: string }, 'Upload'));
+                    return;
+                  }
+                  resolve();
+                });
+              })
+              .catch(() => {
+                reject(this.formatError(sftpErr, 'Upload'));
               });
-            } catch (mkdirErr) {
-              reject(this.formatError(sftpErr, 'Upload'));
-            }
             return;
           }
 

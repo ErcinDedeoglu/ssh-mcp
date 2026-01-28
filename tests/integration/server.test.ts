@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { EventEmitter } from 'node:events';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Config, ServerConfig, PasswordAuth } from '../../src/config/types.js';
 
 vi.mock('ssh2', () => {

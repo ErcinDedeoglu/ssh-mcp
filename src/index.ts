@@ -21,8 +21,8 @@ export async function main(): Promise<void> {
   const config = loadConfig();
   server = new SSHMCPServer(config);
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', () => void shutdown());
+  process.on('SIGTERM', () => void shutdown());
 
   await server.run();
 }

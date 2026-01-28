@@ -16,7 +16,8 @@ export function registerListServersTool(
   config: Config,
   pool: ConnectionPool
 ): void {
-  ((server as any).tool as Function)(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server.tool as any)(
     'list_servers',
     'List all configured SSH servers with their connection status',
     async () => {
