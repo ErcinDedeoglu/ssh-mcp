@@ -290,6 +290,21 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
       expect(results[2].exitCode).toBe(0);
       session.disconnect();
     });
+
+    it('connection remains usable after failed command', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+
+      const failResult = await executeCommand(session.client, 'exit 42');
+      expect(failResult.exitCode).toBe(42);
+
+      expect(session.isConnected).toBe(true);
+      const successResult = await executeCommand(session.client, 'echo "recovered"');
+      expect(successResult.stdout.trim()).toBe('recovered');
+      expect(successResult.exitCode).toBe(0);
+
+      session.disconnect();
+    });
   });
 
   describe('Binary File Transfer', () => {

@@ -20,14 +20,16 @@ export class FileTransfer {
   }
 
   private withTimeout<T>(promise: Promise<T>, operation: string): Promise<T> {
-    return Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`${operation} timed out after ${this.timeoutMs}ms`));
-        }, this.timeoutMs);
-      }),
-    ]);
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`${operation} timed out after ${this.timeoutMs}ms`));
+      }, this.timeoutMs);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => {
+      clearTimeout(timeoutId);
+    });
   }
 
   private expandRemotePath(remotePath: string): string {
@@ -41,7 +43,7 @@ export class FileTransfer {
   }
 
   private getSftp(): Promise<SFTPWrapper> {
-    return new Promise((resolve, reject) => {
+    const sftpPromise = new Promise<SFTPWrapper>((resolve, reject) => {
       this.connection.client.sftp((err, sftp) => {
         if (err) {
           reject(new Error(`SFTP subsystem error: ${err.message}`));
@@ -50,6 +52,8 @@ export class FileTransfer {
         resolve(sftp);
       });
     });
+
+    return this.withTimeout(sftpPromise, 'SFTP initialization');
   }
 
   private isNoSuchFileError(err: Error & { code?: number | string }): boolean {
