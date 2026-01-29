@@ -4,20 +4,24 @@
 
 ## Overview
 
-SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool (registry), FileTransfer (SFTP), ForwardRegistry (port forwarding).
+SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool (registry), FileTransfer (SFTP), ForwardRegistry (port forwarding), ShellSession (persistent shell).
 
 ## Structure
 
-| File                           | Purpose                                                          | Lines |
-| ------------------------------ | ---------------------------------------------------------------- | ----- |
-| `session.ts`                   | SessionKeeper: EventEmitter-based connection with auto-reconnect | 199   |
-| `session.types.ts`             | Types, constants, pure functions (calculateReconnectDelay, etc.) | 52    |
-| `session-connect-config.io.ts` | buildSshConnectConfig(): auth config builder for ssh2            | 44    |
-| `pool.ts`                      | ConnectionPool: Map registry with auto-removal on max-retries    | 43    |
-| `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, recursive mkdir  | 185   |
-| `forward-registry.ts`          | ForwardRegistry: tracks active port forwards, cleanup on close   | 95    |
-| `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring      | 96    |
-| `connection.ts`                | **DEAD CODE** - never use, kept for reference only               | 135   |
+| File                           | Purpose                                                           | Lines |
+| ------------------------------ | ----------------------------------------------------------------- | ----- |
+| `session.ts`                   | SessionKeeper: EventEmitter-based connection with auto-reconnect  | 199   |
+| `session.types.ts`             | Types, constants, pure functions (calculateReconnectDelay, etc.)  | 58    |
+| `session-connect-config.io.ts` | buildSshConnectConfig(): auth config builder for ssh2             | 50    |
+| `pool.ts`                      | ConnectionPool: Map registry with auto-removal on max-retries     | 43    |
+| `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, recursive mkdir   | 189   |
+| `forward-registry.ts`          | ForwardRegistry: tracks active port forwards, cleanup on close    | 97    |
+| `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring       | 105   |
+| `shell-session.ts`             | ShellSession: persistent shell with marker-based command exec     | 199   |
+| `shell-session.types.ts`       | Types, constants, marker generation, output parsing functions     | 100   |
+| `shell-session.io.ts`          | Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt) | 38    |
+| `shell-registry.ts`            | ShellRegistry: Map of serverId → ShellSession                     | 36    |
+| `connection.ts`                | **DEAD CODE** - never use, kept for reference only                | 136   |
 
 ## SessionKeeper State Machine
 
@@ -47,14 +51,17 @@ DISCONNECTED → connect() → CONNECTED
 
 ## Constants
 
-| Constant                          | Value             | Location         |
-| --------------------------------- | ----------------- | ---------------- |
-| `DEFAULT_KEEPALIVE_INTERVAL_MS`   | 30000             | session.types.ts |
-| `DEFAULT_MAX_RECONNECT_ATTEMPTS`  | 5                 | session.types.ts |
-| `DEFAULT_BASE_RECONNECT_DELAY_MS` | 1000              | session.types.ts |
-| `DEFAULT_MAX_RECONNECT_DELAY_MS`  | 30000             | session.types.ts |
-| `DEFAULT_IDLE_TIMEOUT_MS`         | 900000            | session.types.ts |
-| `MAX_FILE_SIZE`                   | 104857600 (100MB) | sftp.ts          |
+| Constant                          | Value             | Location               |
+| --------------------------------- | ----------------- | ---------------------- |
+| `DEFAULT_KEEPALIVE_INTERVAL_MS`   | 30000             | session.types.ts       |
+| `DEFAULT_MAX_RECONNECT_ATTEMPTS`  | 5                 | session.types.ts       |
+| `DEFAULT_BASE_RECONNECT_DELAY_MS` | 1000              | session.types.ts       |
+| `DEFAULT_MAX_RECONNECT_DELAY_MS`  | 30000             | session.types.ts       |
+| `DEFAULT_IDLE_TIMEOUT_MS`         | 900000            | session.types.ts       |
+| `MAX_FILE_SIZE`                   | 104857600 (100MB) | sftp.ts                |
+| `DEFAULT_SHELL_TIMEOUT_MS`        | 30000             | shell-session.types.ts |
+| `DEFAULT_STALL_TIMEOUT_MS`        | 10000             | shell-session.types.ts |
+| `MAX_OUTPUT_SIZE`                 | 10485760 (10MB)   | shell-session.types.ts |
 
 ## Where to Look
 
@@ -68,6 +75,10 @@ DISCONNECTED → connect() → CONNECTED
 | Modify auth config building  | `session-connect-config.io.ts` buildSshConnectConfig() |
 | Change port forward behavior | `local-forward.ts` createLocalForward()                |
 | Modify forward tracking      | `forward-registry.ts` ForwardRegistry class            |
+| Change shell timeout         | `shell-session.types.ts` DEFAULT_SHELL_TIMEOUT_MS      |
+| Change output size limit     | `shell-session.types.ts` MAX_OUTPUT_SIZE               |
+| Modify shell output parsing  | `shell-session.types.ts` parseMarkedOutput()           |
+| Change shell initialization  | `shell-session.io.ts` waitForInitialPrompt()           |
 
 ## Anti-Patterns
 

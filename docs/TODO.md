@@ -15,7 +15,7 @@
 
 - [ ] Dynamic SOCKS proxy - Route all traffic through SSH
 - [ ] SSH agent forwarding - Git operations from remote using local keys
-- [ ] Persistent shell sessions - Maintain cwd/env across commands
+- [x] Persistent shell sessions - Maintain cwd/env across commands (uses `client.shell()` with marker-based output parsing)
 
 ## Test Gaps (Port Forwarding)
 

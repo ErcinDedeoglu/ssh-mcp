@@ -5,6 +5,7 @@ MCP server for SSH connection management and command execution. Define your serv
 ## Features
 
 - Persistent SSH connections with keep-alive and auto-reconnection
+- Persistent shell sessions - working directory and environment variables persist across commands
 - Execute commands on remote servers
 - Upload and download files via SFTP
 - Multi-server support with connection pooling
@@ -113,12 +114,23 @@ Restart Claude Desktop after configuration.
 
 ### execute
 
-**The core tool.** Runs any shell command on the remote server.
+**The core tool.** Runs any shell command on the remote server using a persistent shell session.
 
 ```
 Parameters: serverId, command, timeout (optional)
 Returns: stdout, stderr, exitCode
 ```
+
+**State persistence:** Working directory (`cd`) and environment variables (`export`) persist across multiple execute calls on the same server. This allows natural workflows like:
+
+```
+execute("cd /var/log")
+execute("grep error app.log")   # runs in /var/log
+execute("export DEBUG=1")
+execute("./run-tests.sh")       # sees DEBUG=1
+```
+
+Shell sessions are automatically destroyed on disconnect.
 
 ### upload / download
 

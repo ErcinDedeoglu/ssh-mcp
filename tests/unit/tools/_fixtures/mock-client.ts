@@ -7,6 +7,7 @@ export type MockClientType = EventEmitter & {
   end: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
   exec: ReturnType<typeof vi.fn>;
+  shell: ReturnType<typeof vi.fn>;
   sftp: ReturnType<typeof vi.fn>;
 };
 

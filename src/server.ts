@@ -4,6 +4,7 @@ import type { Config } from './config/types.js';
 import { ConnectionPool } from './ssh/pool.js';
 import { ForwardRegistry } from './ssh/forward-registry.js';
 import { RemoteForwardRegistry } from './ssh/remote-forward-registry.js';
+import { ShellRegistry } from './ssh/shell-registry.js';
 import { registerAllTools } from './tools/index.js';
 
 const SERVER_NAME = 'ssh-mcp';
@@ -14,6 +15,7 @@ export class SSHMCPServer {
   private readonly pool: ConnectionPool;
   private readonly forwardRegistry: ForwardRegistry;
   private readonly remoteForwardRegistry: RemoteForwardRegistry;
+  private readonly shellRegistry: ShellRegistry;
   private readonly config: Config;
   private transport: StdioServerTransport | null = null;
 
@@ -22,6 +24,7 @@ export class SSHMCPServer {
     this.pool = new ConnectionPool();
     this.forwardRegistry = new ForwardRegistry();
     this.remoteForwardRegistry = new RemoteForwardRegistry();
+    this.shellRegistry = new ShellRegistry();
     this.server = new McpServer(
       {
         name: SERVER_NAME,
@@ -40,6 +43,7 @@ export class SSHMCPServer {
       this.pool,
       this.forwardRegistry,
       this.remoteForwardRegistry,
+      this.shellRegistry,
     );
   }
 
@@ -49,6 +53,7 @@ export class SSHMCPServer {
   }
 
   async shutdown(): Promise<void> {
+    this.shellRegistry.clear();
     this.remoteForwardRegistry.clear();
     this.forwardRegistry.clear();
     this.pool.clear();

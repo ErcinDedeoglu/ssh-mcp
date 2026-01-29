@@ -3,6 +3,7 @@ import type { Config } from '../config/types.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { RemoteForwardRegistry } from '../ssh/remote-forward-registry.js';
+import { ShellRegistry } from '../ssh/shell-registry.js';
 
 import { registerListServersTool } from './list-servers.js';
 import { registerConnectTool } from './connect.js';
@@ -26,11 +27,12 @@ export function registerAllTools(
   pool: ConnectionPool,
   forwardRegistry: ForwardRegistry,
   remoteForwardRegistry: RemoteForwardRegistry,
+  shellRegistry: ShellRegistry,
 ): void {
   registerListServersTool(server, config, pool);
   registerConnectTool(server, config, pool, forwardRegistry);
-  registerDisconnectTool(server, pool);
-  registerExecuteTool(server, config, pool);
+  registerDisconnectTool(server, pool, shellRegistry);
+  registerExecuteTool(server, config, pool, shellRegistry);
   registerUploadTool(server, pool);
   registerDownloadTool(server, pool);
   registerConnectionStatusTool(server, pool);

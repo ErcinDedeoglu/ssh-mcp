@@ -5,6 +5,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getMockClient, clearInstances, type MockClientType } from './_fixtures/mock-client.js';
 import { createMockServer } from './_fixtures/mock-server.js';
 import { createTestContext, type TestContext } from './_fixtures/test-setup.js';
+import { ShellRegistry } from '../../../src/ssh/shell-registry.js';
 
 const mockInstances: EventEmitter[] = [];
 
@@ -34,10 +35,12 @@ vi.mock('node:fs', () => ({
 
 describe('disconnect', () => {
   let ctx: TestContext;
+  let shellRegistry: ShellRegistry;
 
   beforeEach(() => {
     clearInstances(mockInstances);
     ctx = createTestContext();
+    shellRegistry = new ShellRegistry();
   });
 
   it('disconnects and removes from pool', async () => {
@@ -52,7 +55,7 @@ describe('disconnect', () => {
     ctx.pool.add(session);
 
     const mockServer = createMockServer();
-    registerDisconnectTool(mockServer as unknown as McpServer, ctx.pool);
+    registerDisconnectTool(mockServer as unknown as McpServer, ctx.pool, shellRegistry);
 
     const handler = mockServer.getToolHandler('disconnect')!;
     const result = await handler({ serverId: 'test-server' });
@@ -66,7 +69,7 @@ describe('disconnect', () => {
     const { registerDisconnectTool } = await import('../../../src/tools/disconnect.js');
 
     const mockServer = createMockServer();
-    registerDisconnectTool(mockServer as unknown as McpServer, ctx.pool);
+    registerDisconnectTool(mockServer as unknown as McpServer, ctx.pool, shellRegistry);
 
     const handler = mockServer.getToolHandler('disconnect')!;
     const result = await handler({ serverId: 'unknown-server' });
