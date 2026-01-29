@@ -4,7 +4,7 @@ import type { Config, ServerConfig, PasswordAuth } from '../../src/config/types.
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { EventEmitter } = require('node:events') as typeof import('node:events');
-  
+
   class MockClient extends EventEmitter {
     connect = vi.fn();
     end = vi.fn();
@@ -12,7 +12,7 @@ const { MockClient } = vi.hoisted(() => {
     exec = vi.fn();
     sftp = vi.fn();
   }
-  
+
   return { MockClient };
 });
 
@@ -42,6 +42,14 @@ vi.mock('../../src/config/loader.js', () => ({
     defaults: {
       timeouts: { command: 60, idle: 900 },
     },
+  })),
+}));
+
+const mockConnect = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
+  StdioServerTransport: vi.fn().mockImplementation(() => ({
+    connect: mockConnect,
   })),
 }));
 
@@ -88,12 +96,24 @@ describe('SSHMCPServer', () => {
     it('clears connection pool on shutdown', async () => {
       const { SSHMCPServer } = await import('../../src/server.js');
       const server = new SSHMCPServer(config);
-      
+
       const pool = server.getPool();
       expect(pool.size).toBe(0);
-      
+
       await server.shutdown();
       expect(pool.size).toBe(0);
+    });
+  });
+
+  describe('run', () => {
+    it('creates StdioServerTransport and connects', async () => {
+      const { SSHMCPServer } = await import('../../src/server.js');
+      const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
+      const server = new SSHMCPServer(config);
+
+      await server.run();
+
+      expect(StdioServerTransport).toHaveBeenCalled();
     });
   });
 

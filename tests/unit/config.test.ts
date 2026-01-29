@@ -3,7 +3,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { loadConfig } from '../../src/config/loader.js';
-import type { Config } from '../../src/config/types.js';
+import type { Config, Auth } from '../../src/config/types.js';
+import { isPasswordAuth, isPrivateKeyAuth } from '../../src/config/types.js';
 
 describe('ConfigLoader', () => {
   const testDir = path.join(os.tmpdir(), 'ssh-mcp-test-' + process.pid);
@@ -231,5 +232,137 @@ describe('ConfigLoader', () => {
     expect(config.servers).toHaveLength(2);
     expect(config.servers[0].id).toBe('prod-web-01');
     expect(config.servers[1].id).toBe('dev-db');
+  });
+});
+
+describe('ConfigLoader Edge Cases', () => {
+  const testDir = path.join(os.tmpdir(), 'ssh-mcp-edge-test-' + process.pid);
+  const configDir = path.join(testDir, '.ssh-mcp');
+  const configPath = path.join(configDir, 'config.json');
+  let originalHome: string | undefined;
+
+  const validConfig: Config = {
+    servers: [
+      {
+        id: 'test-server',
+        host: '192.168.1.100',
+        port: 22,
+        username: 'ubuntu',
+        auth: { privateKey: '/home/user/.ssh/id_rsa' },
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    originalHome = process.env.HOME;
+    process.env.HOME = testDir;
+    fs.mkdirSync(configDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    process.env.HOME = originalHome;
+    fs.rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it('throws on unreadable config file (EACCES)', () => {
+    fs.writeFileSync(configPath, JSON.stringify(validConfig));
+    fs.chmodSync(configPath, 0o000);
+
+    try {
+      expect(() => loadConfig()).toThrow();
+    } finally {
+      fs.chmodSync(configPath, 0o600);
+    }
+  });
+
+  it('throws on invalid auth configuration (neither password nor privateKey)', () => {
+    const invalidAuthConfig = {
+      servers: [
+        {
+          id: 'test-server',
+          host: '192.168.1.100',
+          port: 22,
+          username: 'ubuntu',
+          auth: {},
+        },
+      ],
+    };
+    fs.writeFileSync(configPath, JSON.stringify(invalidAuthConfig));
+    fs.chmodSync(configPath, 0o600);
+
+    expect(() => loadConfig()).toThrow(/schema validation failed/i);
+  });
+
+  it('throws on invalid port number (out of range)', () => {
+    const invalidPortConfig = {
+      servers: [
+        {
+          id: 'test-server',
+          host: '192.168.1.100',
+          port: 70000,
+          username: 'ubuntu',
+          auth: { password: 'secret' },
+        },
+      ],
+    };
+    fs.writeFileSync(configPath, JSON.stringify(invalidPortConfig));
+    fs.chmodSync(configPath, 0o600);
+
+    expect(() => loadConfig()).toThrow(/schema validation failed/i);
+  });
+
+  it('throws on invalid timeout values (negative)', () => {
+    const invalidTimeoutConfig = {
+      servers: [
+        {
+          id: 'test-server',
+          host: '192.168.1.100',
+          port: 22,
+          username: 'ubuntu',
+          auth: { password: 'secret' },
+          timeouts: { connection: -5 },
+        },
+      ],
+    };
+    fs.writeFileSync(configPath, JSON.stringify(invalidTimeoutConfig));
+    fs.chmodSync(configPath, 0o600);
+
+    expect(() => loadConfig()).toThrow(/schema validation failed/i);
+  });
+});
+
+describe('Type Guards', () => {
+  describe('isPasswordAuth', () => {
+    it('returns true for password auth object', () => {
+      const auth: Auth = { password: 'secret123' };
+      expect(isPasswordAuth(auth)).toBe(true);
+    });
+
+    it('returns false for private key auth object', () => {
+      const auth: Auth = { privateKey: '/path/to/key' };
+      expect(isPasswordAuth(auth)).toBe(false);
+    });
+
+    it('returns false for private key auth with passphrase', () => {
+      const auth: Auth = { privateKey: '/path/to/key', passphrase: 'keypass' };
+      expect(isPasswordAuth(auth)).toBe(false);
+    });
+  });
+
+  describe('isPrivateKeyAuth', () => {
+    it('returns true for private key auth object', () => {
+      const auth: Auth = { privateKey: '/path/to/key' };
+      expect(isPrivateKeyAuth(auth)).toBe(true);
+    });
+
+    it('returns true for private key auth with passphrase', () => {
+      const auth: Auth = { privateKey: '/path/to/key', passphrase: 'keypass' };
+      expect(isPrivateKeyAuth(auth)).toBe(true);
+    });
+
+    it('returns false for password auth object', () => {
+      const auth: Auth = { password: 'secret123' };
+      expect(isPrivateKeyAuth(auth)).toBe(false);
+    });
   });
 });

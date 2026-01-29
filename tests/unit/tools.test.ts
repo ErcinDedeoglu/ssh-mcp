@@ -11,20 +11,20 @@ const mockInstances: EventEmitter[] = [];
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { EventEmitter } = require('node:events') as typeof import('node:events');
-  
+
   class MockClient extends EventEmitter {
     connect = vi.fn();
     end = vi.fn();
     destroy = vi.fn();
     exec = vi.fn();
     sftp = vi.fn();
-    
+
     constructor() {
       super();
       mockInstances.push(this);
     }
   }
-  
+
   return { MockClient };
 });
 
@@ -42,16 +42,16 @@ function clearMockInstances(): void {
   mockInstances.length = 0;
 }
 
-function getMockClient(index = 0): EventEmitter & { 
-  connect: ReturnType<typeof vi.fn>; 
-  end: ReturnType<typeof vi.fn>; 
+function getMockClient(index = 0): EventEmitter & {
+  connect: ReturnType<typeof vi.fn>;
+  end: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
   exec: ReturnType<typeof vi.fn>;
   sftp: ReturnType<typeof vi.fn>;
 } {
-  return mockInstances[index] as EventEmitter & { 
-    connect: ReturnType<typeof vi.fn>; 
-    end: ReturnType<typeof vi.fn>; 
+  return mockInstances[index] as EventEmitter & {
+    connect: ReturnType<typeof vi.fn>;
+    end: ReturnType<typeof vi.fn>;
     destroy: ReturnType<typeof vi.fn>;
     exec: ReturnType<typeof vi.fn>;
     sftp: ReturnType<typeof vi.fn>;
@@ -74,16 +74,14 @@ interface MockServer {
 
 function createMockServer(): MockServer {
   const registeredTools = new Map<string, { config: object; handler: ToolHandler }>();
-  
+
   return {
     tool: vi.fn((...args: unknown[]) => {
       const name = args[0] as string;
       const handler = args[args.length - 1] as ToolHandler;
       let config: object;
       if (args.length === 3) {
-        config = typeof args[1] === 'string' 
-          ? { description: args[1] } 
-          : args[1] as object;
+        config = typeof args[1] === 'string' ? { description: args[1] } : (args[1] as object);
       } else if (args.length === 4) {
         config = { description: args[1], schema: args[2] };
       } else {
@@ -161,7 +159,9 @@ describe('MCP Tools', () => {
     });
 
     it('redacts private key content', () => {
-      const error = new Error('Key error: -----BEGIN RSA PRIVATE KEY-----\nMIIE...content...\n-----END RSA PRIVATE KEY-----');
+      const error = new Error(
+        'Key error: -----BEGIN RSA PRIVATE KEY-----\nMIIE...content...\n-----END RSA PRIVATE KEY-----',
+      );
       const sanitized = sanitizeError(error);
       expect(sanitized).toBe('Key error: [REDACTED_KEY]');
       expect(sanitized).not.toContain('BEGIN');
@@ -192,14 +192,14 @@ describe('MCP Tools', () => {
   describe('list_servers', () => {
     it('returns all configured servers', async () => {
       const { registerListServersTool } = await import('../../src/tools/list-servers.js');
-      
+
       const mockServer = createMockServer();
       registerListServersTool(mockServer as unknown as McpServer, config, pool);
 
       expect(mockServer.tool).toHaveBeenCalledWith(
         'list_servers',
         expect.any(String),
-        expect.any(Function)
+        expect.any(Function),
       );
 
       const handler = mockServer.getToolHandler('list_servers')!;
@@ -217,14 +217,14 @@ describe('MCP Tools', () => {
     it('includes connection status for each server', async () => {
       const { registerListServersTool } = await import('../../src/tools/list-servers.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
-      
+
       const connectPromise = session.connect();
       setImmediate(() => mockClient.emit('ready'));
       await connectPromise;
-      
+
       pool.add(session);
 
       const mockServer = createMockServer();
@@ -241,16 +241,16 @@ describe('MCP Tools', () => {
   describe('connect', () => {
     it('connects to a server and adds to pool', async () => {
       const { registerConnectTool } = await import('../../src/tools/connect.js');
-      
+
       const mockServer = createMockServer();
       registerConnectTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('connect')!;
-      
+
       const resultPromise = handler({ serverId: 'test-server' });
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
       getMockClient().emit('ready');
-      
+
       const result = await resultPromise;
 
       expect(result.isError).toBeUndefined();
@@ -263,7 +263,7 @@ describe('MCP Tools', () => {
     it('returns already_connected if connection exists', async () => {
       const { registerConnectTool } = await import('../../src/tools/connect.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -283,7 +283,7 @@ describe('MCP Tools', () => {
 
     it('returns error for unknown server', async () => {
       const { registerConnectTool } = await import('../../src/tools/connect.js');
-      
+
       const mockServer = createMockServer();
       registerConnectTool(mockServer as unknown as McpServer, config, pool);
 
@@ -299,7 +299,7 @@ describe('MCP Tools', () => {
     it('disconnects and removes from pool', async () => {
       const { registerDisconnectTool } = await import('../../src/tools/disconnect.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -320,7 +320,7 @@ describe('MCP Tools', () => {
 
     it('returns error for non-existent connection', async () => {
       const { registerDisconnectTool } = await import('../../src/tools/disconnect.js');
-      
+
       const mockServer = createMockServer();
       registerDisconnectTool(mockServer as unknown as McpServer, pool);
 
@@ -336,7 +336,7 @@ describe('MCP Tools', () => {
     it('runs command and returns stdout/stderr/exitCode', async () => {
       const { registerExecuteTool } = await import('../../src/tools/execute.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -347,13 +347,13 @@ describe('MCP Tools', () => {
       mockClient.exec.mockImplementation((_cmd: string, callback: ExecCallback) => {
         const stream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
         stream.stderr = new EventEmitter();
-        
+
         setImmediate(() => {
           stream.emit('data', Buffer.from('Hello World\n'));
           stream.stderr.emit('data', Buffer.from(''));
           stream.emit('close', 0);
         });
-        
+
         callback(null, stream);
       });
 
@@ -372,7 +372,7 @@ describe('MCP Tools', () => {
     it('respects timeout configuration', async () => {
       const { registerExecuteTool } = await import('../../src/tools/execute.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -381,7 +381,10 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       mockClient.exec.mockImplementation((_cmd: string, callback: ExecCallback) => {
-        const stream = new EventEmitter() as EventEmitter & { stderr: EventEmitter; destroy: () => void };
+        const stream = new EventEmitter() as EventEmitter & {
+          stderr: EventEmitter;
+          destroy: () => void;
+        };
         stream.stderr = new EventEmitter();
         stream.destroy = vi.fn();
         callback(null, stream);
@@ -391,7 +394,11 @@ describe('MCP Tools', () => {
       registerExecuteTool(mockServer as unknown as McpServer, config, pool);
 
       const handler = mockServer.getToolHandler('execute')!;
-      const resultPromise = handler({ serverId: 'test-server', command: 'sleep 100', timeout: 0.05 });
+      const resultPromise = handler({
+        serverId: 'test-server',
+        command: 'sleep 100',
+        timeout: 0.05,
+      });
 
       const result = await resultPromise;
       expect(result.isError).toBe(true);
@@ -401,7 +408,7 @@ describe('MCP Tools', () => {
     it('sanitizes error messages', async () => {
       const { registerExecuteTool } = await import('../../src/tools/execute.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -429,7 +436,108 @@ describe('MCP Tools', () => {
 
     it('returns error when not connected', async () => {
       const { registerExecuteTool } = await import('../../src/tools/execute.js');
-      
+
+      const mockServer = createMockServer();
+      registerExecuteTool(mockServer as unknown as McpServer, config, pool);
+
+      const handler = mockServer.getToolHandler('execute')!;
+      const result = await handler({ serverId: 'test-server', command: 'ls' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('No active connection');
+    });
+
+    it('returns error when stdout exceeds MAX_OUTPUT_SIZE', async () => {
+      const { registerExecuteTool } = await import('../../src/tools/execute.js');
+      const { SessionKeeper } = await import('../../src/ssh/session.js');
+
+      const session = new SessionKeeper(serverConfig);
+      const mockClient = getMockClient();
+      const connectPromise = session.connect();
+      setImmediate(() => mockClient.emit('ready'));
+      await connectPromise;
+      pool.add(session);
+
+      const MAX_OUTPUT_SIZE = 10 * 1024 * 1024;
+      const oversizedData = Buffer.alloc(MAX_OUTPUT_SIZE + 1, 'x');
+
+      mockClient.exec.mockImplementation((_cmd: string, callback: ExecCallback) => {
+        const stream = new EventEmitter() as EventEmitter & {
+          stderr: EventEmitter;
+          destroy: () => void;
+        };
+        stream.stderr = new EventEmitter();
+        stream.destroy = vi.fn();
+
+        setImmediate(() => {
+          stream.emit('data', oversizedData);
+        });
+
+        callback(null, stream);
+      });
+
+      const mockServer = createMockServer();
+      registerExecuteTool(mockServer as unknown as McpServer, config, pool);
+
+      const handler = mockServer.getToolHandler('execute')!;
+      const result = await handler({ serverId: 'test-server', command: 'generate-large-output' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('exceeded');
+    });
+
+    it('returns error when stderr exceeds MAX_OUTPUT_SIZE', async () => {
+      const { registerExecuteTool } = await import('../../src/tools/execute.js');
+      const { SessionKeeper } = await import('../../src/ssh/session.js');
+
+      const session = new SessionKeeper(serverConfig);
+      const mockClient = getMockClient();
+      const connectPromise = session.connect();
+      setImmediate(() => mockClient.emit('ready'));
+      await connectPromise;
+      pool.add(session);
+
+      const MAX_OUTPUT_SIZE = 10 * 1024 * 1024;
+      const oversizedData = Buffer.alloc(MAX_OUTPUT_SIZE + 1, 'x');
+
+      mockClient.exec.mockImplementation((_cmd: string, callback: ExecCallback) => {
+        const stream = new EventEmitter() as EventEmitter & {
+          stderr: EventEmitter;
+          destroy: () => void;
+        };
+        stream.stderr = new EventEmitter();
+        stream.destroy = vi.fn();
+
+        setImmediate(() => {
+          stream.stderr.emit('data', oversizedData);
+        });
+
+        callback(null, stream);
+      });
+
+      const mockServer = createMockServer();
+      registerExecuteTool(mockServer as unknown as McpServer, config, pool);
+
+      const handler = mockServer.getToolHandler('execute')!;
+      const result = await handler({ serverId: 'test-server', command: 'generate-large-stderr' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('stderr exceeded');
+    });
+
+    it('returns error when connection is not active', async () => {
+      const { registerExecuteTool } = await import('../../src/tools/execute.js');
+      const { SessionKeeper } = await import('../../src/ssh/session.js');
+
+      const session = new SessionKeeper(serverConfig, { maxReconnectAttempts: 0 });
+      const mockClient = getMockClient();
+      const connectPromise = session.connect();
+      setImmediate(() => mockClient.emit('ready'));
+      await connectPromise;
+      pool.add(session);
+
+      mockClient.emit('close');
+
       const mockServer = createMockServer();
       registerExecuteTool(mockServer as unknown as McpServer, config, pool);
 
@@ -445,7 +553,7 @@ describe('MCP Tools', () => {
     it('uploads file via SFTP', async () => {
       const { registerUploadTool } = await import('../../src/tools/upload.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -466,10 +574,10 @@ describe('MCP Tools', () => {
       registerUploadTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('upload')!;
-      const result = await handler({ 
-        serverId: 'test-server', 
-        localPath: '/tmp/test.txt', 
-        remotePath: '~/uploads/test.txt' 
+      const result = await handler({
+        serverId: 'test-server',
+        localPath: '/tmp/test.txt',
+        remotePath: '~/uploads/test.txt',
       });
 
       const parsed = JSON.parse(result.content[0].text);
@@ -478,14 +586,14 @@ describe('MCP Tools', () => {
 
     it('validates file size', async () => {
       const fs = await import('node:fs');
-      (fs.statSync as ReturnType<typeof vi.fn>).mockReturnValue({ 
-        mode: 0o100600, 
-        size: 200 * 1024 * 1024 
+      (fs.statSync as ReturnType<typeof vi.fn>).mockReturnValue({
+        mode: 0o100600,
+        size: 200 * 1024 * 1024,
       });
 
       const { registerUploadTool } = await import('../../src/tools/upload.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -497,10 +605,10 @@ describe('MCP Tools', () => {
       registerUploadTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('upload')!;
-      const result = await handler({ 
-        serverId: 'test-server', 
-        localPath: '/tmp/large.bin', 
-        remotePath: '~/uploads/large.bin' 
+      const result = await handler({
+        serverId: 'test-server',
+        localPath: '/tmp/large.bin',
+        remotePath: '~/uploads/large.bin',
       });
 
       expect(result.isError).toBe(true);
@@ -512,7 +620,7 @@ describe('MCP Tools', () => {
     it('downloads file via SFTP', async () => {
       const { registerDownloadTool } = await import('../../src/tools/download.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -536,10 +644,10 @@ describe('MCP Tools', () => {
       registerDownloadTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('download')!;
-      const result = await handler({ 
-        serverId: 'test-server', 
-        remotePath: '~/data/file.txt', 
-        localPath: '/tmp/downloaded.txt' 
+      const result = await handler({
+        serverId: 'test-server',
+        remotePath: '~/data/file.txt',
+        localPath: '/tmp/downloaded.txt',
       });
 
       const parsed = JSON.parse(result.content[0].text);
@@ -549,7 +657,7 @@ describe('MCP Tools', () => {
     it('validates remote file size', async () => {
       const { registerDownloadTool } = await import('../../src/tools/download.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -570,10 +678,10 @@ describe('MCP Tools', () => {
       registerDownloadTool(mockServer as unknown as McpServer, pool);
 
       const handler = mockServer.getToolHandler('download')!;
-      const result = await handler({ 
-        serverId: 'test-server', 
-        remotePath: '~/data/large.bin', 
-        localPath: '/tmp/large.bin' 
+      const result = await handler({
+        serverId: 'test-server',
+        remotePath: '~/data/large.bin',
+        localPath: '/tmp/large.bin',
       });
 
       expect(result.isError).toBe(true);
@@ -585,7 +693,7 @@ describe('MCP Tools', () => {
     it('returns health status for connected server', async () => {
       const { registerConnectionStatusTool } = await import('../../src/tools/connection-status.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig);
       const mockClient = getMockClient();
       const connectPromise = session.connect();
@@ -608,7 +716,7 @@ describe('MCP Tools', () => {
 
     it('returns not connected for unknown server', async () => {
       const { registerConnectionStatusTool } = await import('../../src/tools/connection-status.js');
-      
+
       const mockServer = createMockServer();
       registerConnectionStatusTool(mockServer as unknown as McpServer, pool);
 
@@ -623,7 +731,7 @@ describe('MCP Tools', () => {
     it('includes reconnect attempt when reconnecting', async () => {
       const { registerConnectionStatusTool } = await import('../../src/tools/connection-status.js');
       const { SessionKeeper } = await import('../../src/ssh/session.js');
-      
+
       const session = new SessionKeeper(serverConfig, {
         baseReconnectDelayMs: 1000,
       });
@@ -634,7 +742,7 @@ describe('MCP Tools', () => {
       pool.add(session);
 
       mockClient.emit('close');
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const mockServer = createMockServer();
       registerConnectionStatusTool(mockServer as unknown as McpServer, pool);

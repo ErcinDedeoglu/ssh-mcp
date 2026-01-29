@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { execSync } from 'node:child_process';
 import { SessionKeeper } from '../../src/ssh/session.js';
-import { FileTransfer } from '../../src/ssh/sftp.js';
+import { FileTransfer, MAX_FILE_SIZE } from '../../src/ssh/sftp.js';
 import { ConnectionPool } from '../../src/ssh/pool.js';
 import type { ServerConfig, PasswordAuth } from '../../src/config/types.js';
 import type { Client } from 'ssh2';
@@ -170,7 +170,10 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
     it('handles command with pipe', async () => {
       const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
       await session.connect();
-      const result = await executeCommand(session.client, 'echo -e "line1\\nline2\\nline3" | wc -l');
+      const result = await executeCommand(
+        session.client,
+        'echo -e "line1\\nline2\\nline3" | wc -l',
+      );
       expect(result.stdout.trim()).toBe('3');
       session.disconnect();
     });
@@ -187,8 +190,16 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
     });
 
     afterAll(() => {
-      try { fs.unlinkSync(localTestFile); } catch { /* ignore */ }
-      try { fs.unlinkSync(localDownloadFile); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(localTestFile);
+      } catch {
+        /* ignore */
+      }
+      try {
+        fs.unlinkSync(localDownloadFile);
+      } catch {
+        /* ignore */
+      }
     });
 
     it('uploads file to remote server', async () => {
@@ -247,7 +258,7 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
         maxReconnectAttempts: 0,
       });
       await session.connect();
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       expect(session.isConnected).toBe(true);
       const result = await executeCommand(session.client, 'echo "still connected"');
       expect(result.stdout.trim()).toBe('still connected');
@@ -270,7 +281,7 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
       expect(results[0].stdout.trim()).toBe('cmd1');
       expect(results[1].stdout.trim()).toBe('cmd2');
       expect(results[2].stdout.trim()).toBe('cmd3');
-      expect(results.every(r => r.exitCode === 0)).toBe(true);
+      expect(results.every((r) => r.exitCode === 0)).toBe(true);
       session.disconnect();
     });
 
@@ -313,8 +324,16 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
     const remoteBinaryFile = '/tmp/ssh-mcp-test-binary.bin';
 
     afterAll(() => {
-      try { fs.unlinkSync(localBinaryFile); } catch { /* ignore */ }
-      try { fs.unlinkSync(localDownloadBinary); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(localBinaryFile);
+      } catch {
+        /* ignore */
+      }
+      try {
+        fs.unlinkSync(localDownloadBinary);
+      } catch {
+        /* ignore */
+      }
     });
 
     it('uploads and downloads binary file correctly', async () => {
@@ -403,6 +422,106 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
 
       await executeCommand(session.client, `rm "${remoteUnicode}"`);
       fs.unlinkSync(unicodeFile);
+      session.disconnect();
+    });
+  });
+
+  describe('Idle Timeout', () => {
+    it('marks session as idle after configured timeout', async () => {
+      const idleTimeoutMs = 100;
+      const session = new SessionKeeper(server1Config, {
+        maxReconnectAttempts: 0,
+        idleTimeoutMs,
+      });
+      await session.connect();
+
+      expect(session.isIdle).toBe(false);
+
+      await new Promise((resolve) => setTimeout(resolve, idleTimeoutMs + 50));
+
+      expect(session.isIdle).toBe(true);
+
+      session.touch();
+      expect(session.isIdle).toBe(false);
+
+      session.disconnect();
+    });
+
+    it('health check reflects idle status', async () => {
+      const idleTimeoutMs = 100;
+      const session = new SessionKeeper(server1Config, {
+        maxReconnectAttempts: 0,
+        idleTimeoutMs,
+      });
+      await session.connect();
+
+      let health = session.healthCheck();
+      expect(health.connected).toBe(true);
+      expect(health.idle).toBe(false);
+
+      await new Promise((resolve) => setTimeout(resolve, idleTimeoutMs + 50));
+
+      health = session.healthCheck();
+      expect(health.connected).toBe(true);
+      expect(health.idle).toBe(true);
+
+      session.disconnect();
+    });
+  });
+
+  describe('File Size Limits', () => {
+    it('allows upload and download of small files', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+
+      const localFile = path.join(os.tmpdir(), 'ssh-mcp-small-file.txt');
+      const remoteFile = '/tmp/ssh-mcp-small-file.txt';
+      const localDownload = path.join(os.tmpdir(), 'ssh-mcp-small-download.txt');
+
+      fs.writeFileSync(localFile, 'Small file content for testing');
+
+      const fileTransfer = new FileTransfer(session);
+
+      await fileTransfer.upload(localFile, remoteFile);
+      const uploadResult = await executeCommand(session.client, `cat ${remoteFile}`);
+      expect(uploadResult.stdout).toBe('Small file content for testing');
+
+      await fileTransfer.download(remoteFile, localDownload);
+      expect(fs.existsSync(localDownload)).toBe(true);
+      expect(fs.readFileSync(localDownload, 'utf-8')).toBe('Small file content for testing');
+
+      fs.unlinkSync(localFile);
+      fs.unlinkSync(localDownload);
+      await executeCommand(session.client, `rm ${remoteFile}`);
+      session.disconnect();
+    });
+
+    it('MAX_FILE_SIZE constant is 100MB', () => {
+      expect(MAX_FILE_SIZE).toBe(100 * 1024 * 1024);
+    });
+
+    it('rejects upload of non-existent file', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+      const fileTransfer = new FileTransfer(session);
+
+      await expect(
+        fileTransfer.upload('/nonexistent/file/path.txt', '/tmp/test.txt'),
+      ).rejects.toThrow(/Local file not found/);
+
+      session.disconnect();
+    });
+
+    it('rejects download of non-existent remote file', async () => {
+      const session = new SessionKeeper(server1Config, { maxReconnectAttempts: 0 });
+      await session.connect();
+      const fileTransfer = new FileTransfer(session);
+      const localPath = path.join(os.tmpdir(), 'ssh-mcp-nonexistent-download.txt');
+
+      await expect(
+        fileTransfer.download('/nonexistent/remote/file.txt', localPath),
+      ).rejects.toThrow(/Remote file not found/);
+
       session.disconnect();
     });
   });

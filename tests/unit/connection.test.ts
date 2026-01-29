@@ -7,18 +7,18 @@ const mockInstances: EventEmitter[] = [];
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { EventEmitter } = require('node:events') as typeof import('node:events');
-  
+
   class MockClient extends EventEmitter {
     connect = vi.fn();
     end = vi.fn();
     destroy = vi.fn();
-    
+
     constructor() {
       super();
       mockInstances.push(this);
     }
   }
-  
+
   return { MockClient };
 });
 
@@ -40,8 +40,18 @@ function clearMockInstances(): void {
   mockInstances.length = 0;
 }
 
-function getMockClient(index = 0): EventEmitter & { connect: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> } {
-  return mockInstances[index] as EventEmitter & { connect: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> };
+function getMockClient(
+  index = 0,
+): EventEmitter & {
+  connect: ReturnType<typeof vi.fn>;
+  end: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn>;
+} {
+  return mockInstances[index] as EventEmitter & {
+    connect: ReturnType<typeof vi.fn>;
+    end: ReturnType<typeof vi.fn>;
+    destroy: ReturnType<typeof vi.fn>;
+  };
 }
 
 describe('SSHConnection', () => {
@@ -89,7 +99,7 @@ describe('SSHConnection', () => {
           port: 22,
           username: 'ubuntu',
           password: 'secret123',
-        })
+        }),
       );
     });
 
@@ -108,7 +118,7 @@ describe('SSHConnection', () => {
           username: 'deploy',
           privateKey: 'fake-private-key-content',
           passphrase: 'keypass',
-        })
+        }),
       );
     });
 
@@ -135,7 +145,7 @@ describe('SSHConnection', () => {
         const connection = new SSHConnection(configWithShortTimeout);
 
         const connectPromise = connection.connect();
-        
+
         vi.advanceTimersByTime(1500);
 
         await expect(connectPromise).rejects.toThrow(/timeout/i);
@@ -153,7 +163,7 @@ describe('SSHConnection', () => {
       expect(mockClient.connect).toHaveBeenCalledWith(
         expect.objectContaining({
           readyTimeout: 10000,
-        })
+        }),
       );
     });
 
@@ -170,7 +180,7 @@ describe('SSHConnection', () => {
       expect(mockClient.connect).toHaveBeenCalledWith(
         expect.objectContaining({
           readyTimeout: 30000,
-        })
+        }),
       );
     });
   });
@@ -281,6 +291,91 @@ describe('SSHConnection', () => {
       connection.disconnect();
 
       expect(mockClient.end).toHaveBeenCalled();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('throws on invalid passphrase for encrypted key', async () => {
+      const connection = new SSHConnection(serverConfigKey);
+      const mockClient = getMockClient();
+
+      const connectPromise = connection.connect();
+      setImmediate(() => {
+        mockClient.emit(
+          'error',
+          new Error('Encrypted private key detected, but no passphrase given'),
+        );
+      });
+
+      await expect(connectPromise).rejects.toThrow(/passphrase/i);
+    });
+
+    it('throws on wrong passphrase for encrypted key', async () => {
+      const connection = new SSHConnection(serverConfigKey);
+      const mockClient = getMockClient();
+
+      const connectPromise = connection.connect();
+      setImmediate(() => {
+        mockClient.emit('error', new Error('Cannot parse privateKey: bad decrypt'));
+      });
+
+      await expect(connectPromise).rejects.toThrow(/decrypt/i);
+    });
+
+    it('handles network interruption during connection', async () => {
+      const connection = new SSHConnection(serverConfigPassword);
+      const mockClient = getMockClient();
+
+      const connectPromise = connection.connect();
+      setImmediate(() => {
+        mockClient.emit('error', new Error('ECONNREFUSED: Connection refused'));
+      });
+
+      await expect(connectPromise).rejects.toThrow(/ECONNREFUSED/i);
+    });
+
+    it('handles host unreachable error', async () => {
+      const connection = new SSHConnection(serverConfigPassword);
+      const mockClient = getMockClient();
+
+      const connectPromise = connection.connect();
+      setImmediate(() => {
+        mockClient.emit('error', new Error('EHOSTUNREACH: No route to host'));
+      });
+
+      await expect(connectPromise).rejects.toThrow(/EHOSTUNREACH/i);
+    });
+
+    it('handles DNS resolution failure', async () => {
+      const connection = new SSHConnection(serverConfigPassword);
+      const mockClient = getMockClient();
+
+      const connectPromise = connection.connect();
+      setImmediate(() => {
+        mockClient.emit('error', new Error('ENOTFOUND: getaddrinfo ENOTFOUND'));
+      });
+
+      await expect(connectPromise).rejects.toThrow(/ENOTFOUND/i);
+    });
+
+    it('emits error event even without listeners when error occurs after connection', async () => {
+      const connection = new SSHConnection(serverConfigPassword);
+      const mockClient = getMockClient();
+
+      const connectPromise = connection.connect();
+      setImmediate(() => mockClient.emit('ready'));
+      await connectPromise;
+
+      const errorHandler = vi.fn();
+      connection.on('error', errorHandler);
+
+      mockClient.emit('error', new Error('Connection reset by peer'));
+      expect(errorHandler).toHaveBeenCalled();
+    });
+
+    it('exposes username from config', () => {
+      const connection = new SSHConnection(serverConfigPassword);
+      expect(connection.username).toBe('ubuntu');
     });
   });
 });
