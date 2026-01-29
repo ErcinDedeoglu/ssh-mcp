@@ -32,7 +32,7 @@
 ### Low Priority
 
 - [x] **Large data transfer** - Stress test in `port-forward-connections.e2e.test.ts` verifies >1MB through SSH command execution.
-- [ ] **Server shutdown cleanup verification** - Explicit test that `SSHMCPServer.shutdown()` properly closes all forwards
+- [x] **Server shutdown cleanup verification** - Test in `tests/integration/server.test.ts` verifies `shutdown()` closes all forward servers and sockets.
 - [ ] **Rapid forward create/delete cycles** - Stress test forward lifecycle
 
 ## Security Debt (SECURITY.md claims but not implemented)

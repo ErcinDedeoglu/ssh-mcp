@@ -79,13 +79,7 @@ describe('SSHMCPServer', () => {
   });
 
   describe('initialization', () => {
-    it('creates server with correct name and version', async () => {
-      const { SSHMCPServer } = await import('../../src/server.js');
-      const server = new SSHMCPServer(config);
-      expect(server).toBeDefined();
-    });
-
-    it('registers all 10 tools', async () => {
+    it('creates server instance', async () => {
       const { SSHMCPServer } = await import('../../src/server.js');
       const server = new SSHMCPServer(config);
       expect(server).toBeDefined();
@@ -121,6 +115,49 @@ describe('SSHMCPServer', () => {
 
       await server.shutdown();
       expect(registry.size).toBe(0);
+    });
+
+    it('closes all active forwards on shutdown', async () => {
+      const { SSHMCPServer } = await import('../../src/server.js');
+      const server = new SSHMCPServer(config);
+      const registry = server.getForwardRegistry();
+
+      const mockServer1 = { close: vi.fn() };
+      const mockServer2 = { close: vi.fn() };
+      const mockSocket1 = { destroy: vi.fn() };
+      const mockSocket2 = { destroy: vi.fn() };
+
+      registry.add({
+        serverId: 'test-server',
+        localHost: '127.0.0.1',
+        localPort: 9001,
+        remoteHost: 'localhost',
+        remotePort: 3306,
+        server: mockServer1 as never,
+        activeSockets: new Set([mockSocket1 as never]),
+        createdAt: Date.now(),
+      });
+
+      registry.add({
+        serverId: 'test-server',
+        localHost: '127.0.0.1',
+        localPort: 9002,
+        remoteHost: 'localhost',
+        remotePort: 5432,
+        server: mockServer2 as never,
+        activeSockets: new Set([mockSocket2 as never]),
+        createdAt: Date.now(),
+      });
+
+      expect(registry.size).toBe(2);
+
+      await server.shutdown();
+
+      expect(registry.size).toBe(0);
+      expect(mockServer1.close).toHaveBeenCalled();
+      expect(mockServer2.close).toHaveBeenCalled();
+      expect(mockSocket1.destroy).toHaveBeenCalled();
+      expect(mockSocket2.destroy).toHaveBeenCalled();
     });
   });
 
