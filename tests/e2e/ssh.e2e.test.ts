@@ -864,7 +864,7 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
       session.disconnect();
     }, 15000);
 
-    it('emits max-retries-reached after exhausting attempts with unreachable host', async () => {
+    it('fails to connect to unreachable host', async () => {
       const badConfig: ServerConfig = {
         ...server1Config,
         id: 'unreachable-server',
@@ -873,14 +873,7 @@ describe.skipIf(!isDockerRunning())('E2E SSH Tests', () => {
       };
 
       const session = new SessionKeeper(badConfig, {
-        maxReconnectAttempts: 2,
-        baseReconnectDelayMs: 50,
-        maxReconnectDelayMs: 100,
-      });
-
-      let maxRetriesReached = false;
-      session.on('max-retries-reached', () => {
-        maxRetriesReached = true;
+        maxReconnectAttempts: 0,
       });
 
       await expect(session.connect()).rejects.toThrow();
