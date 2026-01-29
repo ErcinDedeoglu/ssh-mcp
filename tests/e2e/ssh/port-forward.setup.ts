@@ -71,11 +71,7 @@ export async function testTcpConnection(
   });
 }
 
-export async function readSshBannerFromPort(
-  host: string,
-  port: number,
-  timeoutMs = 5000,
-): Promise<string> {
+async function readSshBannerOnce(host: string, port: number, timeoutMs: number): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const socket = net.createConnection({ host, port }, () => {
       let data = '';
@@ -93,4 +89,28 @@ export async function readSshBannerFromPort(
       reject(new Error('Timeout'));
     });
   });
+}
+
+export async function readSshBannerFromPort(
+  host: string,
+  port: number,
+  timeoutMs = 5000,
+  maxRetries = 5,
+): Promise<string> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const banner = await readSshBannerOnce(host, port, timeoutMs);
+      if (banner.includes('SSH-')) {
+        return banner;
+      }
+      // Got non-SSH response (e.g., "Not allowed at this time"), retry after delay
+      lastError = new Error(`Non-SSH response: ${banner}`);
+      await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+    } catch (err) {
+      lastError = err as Error;
+      await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+    }
+  }
+  throw lastError ?? new Error('Failed to read SSH banner');
 }

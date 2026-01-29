@@ -12,6 +12,7 @@ import {
   createLocalForward,
   type LocalForwardConfig,
 } from './port-forward.setup.js';
+import { executeCommand } from './ssh.setup.js';
 
 describe.skipIf(!isDockerRunning())('E2E Port Forwarding - Connection Tracking', () => {
   const { getCtx, getRegistry, setup, teardown, cleanupAfterEach } = createPortForwardTestSetup();
@@ -97,4 +98,21 @@ describe.skipIf(!isDockerRunning())('E2E Port Forwarding - Connection Tracking',
 
     session.disconnect();
   });
+
+  it('streams large data (>1MB) through SSH command execution', async () => {
+    const ctx = getCtx();
+    const session = new SessionKeeper(ctx.server1Config, { maxReconnectAttempts: 0 });
+    await session.connect();
+
+    const result = await executeCommand(
+      session.client,
+      'dd if=/dev/zero bs=1024 count=1500 2>/dev/null | base64',
+    );
+
+    const expectedMinSize = 1500 * 1024 * (4 / 3);
+    expect(result.stdout.length).toBeGreaterThan(expectedMinSize * 0.9);
+    expect(result.exitCode).toBe(0);
+
+    session.disconnect();
+  }, 30000);
 });

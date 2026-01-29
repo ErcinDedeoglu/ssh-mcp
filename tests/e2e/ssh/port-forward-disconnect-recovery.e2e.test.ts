@@ -75,6 +75,9 @@ describe.skipIf(!isDockerRunning())('E2E Port Forwarding - Disconnect Recovery',
     });
     await session.connect();
 
+    // Wait for SSH session to fully stabilize before creating forwards
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     const result1 = await createLocalForward(
       {
         client: session.client,
@@ -86,6 +89,9 @@ describe.skipIf(!isDockerRunning())('E2E Port Forwarding - Disconnect Recovery',
       },
       forwardRegistry,
     );
+
+    // Allow tunnel to stabilize before reading banner
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const banner1 = await readSshBannerFromPort(result1.localHost, result1.localPort);
     expect(banner1).toContain('SSH-2.0');
@@ -110,6 +116,9 @@ describe.skipIf(!isDockerRunning())('E2E Port Forwarding - Disconnect Recovery',
       },
       forwardRegistry,
     );
+
+    // Allow tunnel to stabilize before reading banner
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const banner2 = await readSshBannerFromPort(result2.localHost, result2.localPort);
     expect(banner2).toContain('SSH-2.0');

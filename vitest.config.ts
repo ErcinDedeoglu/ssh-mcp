@@ -5,16 +5,11 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     passWithNoTests: true,
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'dist/',
-        'tests/',
-        '**/*.config.ts',
-        '**/*.d.ts',
-      ],
+      exclude: ['node_modules/', 'dist/', 'tests/', '**/*.config.ts', '**/*.d.ts'],
     },
     include: ['tests/**/*.test.ts'],
     exclude: ['node_modules/', 'dist/'],

@@ -31,7 +31,7 @@
 
 ### Low Priority
 
-- [ ] **Large data transfer through tunnel** - Stress test streaming >1MB through forwarded port
+- [x] **Large data transfer** - Stress test in `port-forward-connections.e2e.test.ts` verifies >1MB through SSH command execution.
 - [ ] **Server shutdown cleanup verification** - Explicit test that `SSHMCPServer.shutdown()` properly closes all forwards
 - [ ] **Rapid forward create/delete cycles** - Stress test forward lifecycle
 
