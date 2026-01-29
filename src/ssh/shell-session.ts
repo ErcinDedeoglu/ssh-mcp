@@ -50,7 +50,6 @@ export class ShellSession {
     await waitForMcpPrompt(this.stream, this.options.timeoutMs);
     this.ready = true;
   }
-
   async execute(command: string, timeoutMs?: number): Promise<ShellExecuteResult> {
     if (!this.isReady) {
       throw new Error('Shell session not initialized');
@@ -157,7 +156,8 @@ export class ShellSession {
   }
 
   getHistory(limit?: number): HistoryEntry[] {
-    return limit === 0 ? [] : this.history.slice(-(limit ?? this.history.length));
+    if (limit === 0) return [];
+    return this.history.slice(-(limit ?? this.history.length)).map((e) => ({ ...e }));
   }
 
   private startTimeoutTimer(): void {
