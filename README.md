@@ -21,7 +21,16 @@ npm install ssh-mcp
 
 ## Configuration
 
-Create the config file at `~/.ssh-mcp/config.json` (Linux/macOS) or `%USERPROFILE%\.ssh-mcp\config.json` (Windows):
+By default, the config file is at `~/.ssh-mcp/config.json`. You can override this with:
+
+| Method               | Example                                   |
+| -------------------- | ----------------------------------------- |
+| Environment variable | `SSH_MCP_CONFIG=~/.config/myapp/ssh.json` |
+| CLI argument         | `--config ~/.config/myapp/ssh.json`       |
+
+Priority: CLI arg > env var > default. The `~` expands to home directory on all platforms.
+
+### Config file format
 
 ```json
 {
@@ -88,22 +97,11 @@ Use the `keys` section to define a key once and reference it by alias across mul
 chmod 600 ~/.ssh-mcp/config.json
 ```
 
-## Claude Desktop Integration
+## MCP Client Integration
+
+### Claude Desktop
 
 Add to `~/.config/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "ssh-mcp": {
-      "command": "node",
-      "args": ["/path/to/ssh-mcp/dist/index.js"]
-    }
-  }
-}
-```
-
-Or if installed globally:
 
 ```json
 {
@@ -116,28 +114,62 @@ Or if installed globally:
 }
 ```
 
-Restart Claude Desktop after configuration.
+With custom config path:
+
+```json
+{
+  "mcpServers": {
+    "ssh-mcp": {
+      "command": "npx",
+      "args": ["ssh-mcp"],
+      "env": {
+        "SSH_MCP_CONFIG": "~/.config/claude/ssh-mcp.json"
+      }
+    }
+  }
+}
+```
+
+### OpenCode
+
+Add to `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "mcp": {
+    "ssh-mcp": {
+      "type": "local",
+      "command": ["npx", "ssh-mcp"],
+      "environment": {
+        "SSH_MCP_CONFIG": "~/.config/opencode/ssh-mcp.json"
+      }
+    }
+  }
+}
+```
+
+Restart the MCP client after configuration.
 
 ## Tools
 
 **`execute` is the primary tool.** Use it for all shell operations: `ls`, `cat`, `mkdir`, `rm`, `chmod`, `grep`, `ps`, file I/O, etc. Other tools exist only for operations impossible via shell commands.
 
-| Tool                   | Purpose                                       |
-| ---------------------- | --------------------------------------------- |
-| `list_servers`         | List configured servers (auto-reloads config) |
-| `connect`              | Establish SSH connection                      |
-| `disconnect`           | Close SSH connection                          |
-| `execute`              | **Run any shell command**                     |
-| `get_console_history`  | Retrieve previous command outputs             |
-| `upload`               | SFTP upload (binary-safe, up to 100MB)        |
-| `download`             | SFTP download (binary-safe, up to 100MB)      |
-| `connection_status`    | Check connection health                       |
-| `jump_connect`         | Connect through a jump host (bastion)         |
-| `forward_port`         | Local port forward (access remote services)   |
-| `forward_remote_port`  | Remote port forward (expose local services)   |
-| `list_forwards`        | List active port forwards                     |
-| `close_forward`        | Close a local port forward                    |
-| `close_remote_forward` | Close a remote port forward                   |
+| Tool                   | Purpose                                         |
+| ---------------------- | ----------------------------------------------- |
+| `list_servers`         | List configured servers (auto-reloads config)   |
+| `connect`              | Establish SSH connection (auto-reloads config)  |
+| `disconnect`           | Close SSH connection                            |
+| `execute`              | **Run any shell command**                       |
+| `get_console_history`  | Retrieve previous command outputs               |
+| `upload`               | SFTP upload (binary-safe, up to 100MB)          |
+| `download`             | SFTP download (binary-safe, up to 100MB)        |
+| `connection_status`    | Check connection health                         |
+| `jump_connect`         | Connect through jump host (auto-reloads config) |
+| `forward_port`         | Local port forward (access remote services)     |
+| `forward_remote_port`  | Remote port forward (expose local services)     |
+| `list_forwards`        | List active port forwards                       |
+| `close_forward`        | Close a local port forward                      |
+| `close_remote_forward` | Close a remote port forward                     |
 
 ### execute
 
@@ -195,11 +227,11 @@ Connection lifecycle management. Protocol-level operations that can't be done vi
 
 ### "Config file not found"
 
-Create `~/.ssh-mcp/config.json` with at least one server defined.
+A template config is auto-generated at the specified path. Edit it with your servers and restart.
 
 ### "Insecure file permissions"
 
-Run `chmod 600 ~/.ssh-mcp/config.json` to restrict access.
+Run `chmod 600 <config-path>` to restrict access. This check is skipped on Windows.
 
 ### "Authentication failed"
 
@@ -231,7 +263,7 @@ See [SECURITY.md](./SECURITY.md) for:
 
 **Key points:**
 
-- Config file requires 0600 permissions
+- Config file requires 0600 permissions (Linux/macOS only)
 - Credentials never appear in logs or error messages
 - SSH keys are recommended over passwords
 

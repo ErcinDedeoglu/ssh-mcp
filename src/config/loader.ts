@@ -7,9 +7,25 @@ import type { Config } from './types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function expandHome(filePath: string): string {
+  if (filePath.startsWith('~')) {
+    return path.join(os.homedir(), filePath.slice(1));
+  }
+  return filePath;
+}
+
 function getConfigPath(): string {
-  const home = os.homedir();
-  return path.join(home, '.ssh-mcp', 'config.json');
+  // Priority: CLI arg > env var > default
+  const cliIndex = process.argv.indexOf('--config');
+  if (cliIndex !== -1 && process.argv[cliIndex + 1]) {
+    return expandHome(process.argv[cliIndex + 1]);
+  }
+
+  if (process.env.SSH_MCP_CONFIG) {
+    return expandHome(process.env.SSH_MCP_CONFIG);
+  }
+
+  return path.join(os.homedir(), '.ssh-mcp', 'config.json');
 }
 
 function getSchemaPath(): string {
@@ -18,7 +34,50 @@ function getSchemaPath(): string {
 
 const GROUP_AND_OTHERS_PERMISSION_MASK = 0o077;
 
+const CONFIG_TEMPLATE = {
+  _comment: 'SSH-MCP Configuration - Edit this file and restart. Delete _comment fields.',
+  keys: {
+    _comment: 'Define SSH keys here, reference by name in servers below',
+    'my-key':
+      '-----BEGIN OPENSSH PRIVATE KEY-----\n...paste your key here...\n-----END OPENSSH PRIVATE KEY-----',
+  },
+  servers: [
+    {
+      _comment: 'Example server - duplicate and modify for your servers',
+      id: 'my-server',
+      host: 'example.com',
+      port: 22,
+      username: 'ubuntu',
+      auth: {
+        privateKey: 'my-key',
+      },
+      description: 'My example server',
+    },
+  ],
+  defaults: {
+    timeouts: {
+      connection: 10,
+      command: 60,
+      idle: 900,
+    },
+  },
+};
+
+function createTemplateConfig(configPath: string): void {
+  const dir = path.dirname(configPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  }
+
+  const content = JSON.stringify(CONFIG_TEMPLATE, null, 2);
+  fs.writeFileSync(configPath, content, { mode: 0o600 });
+}
+
 function checkPermissions(filePath: string): void {
+  if (process.platform === 'win32') {
+    return;
+  }
+
   const stats = fs.statSync(filePath);
   const mode = stats.mode & 0o777;
   const hasGroupOrOthersAccess = (mode & GROUP_AND_OTHERS_PERMISSION_MASK) !== 0;
@@ -54,7 +113,10 @@ export function loadConfig(): Config {
   const configPath = getConfigPath();
 
   if (!fs.existsSync(configPath)) {
-    throw new Error('Config file not found at ~/.ssh-mcp/config.json');
+    createTemplateConfig(configPath);
+    throw new Error(
+      `Config file not found. Created template at ${configPath} - edit it with your servers and restart.`,
+    );
   }
 
   checkPermissions(configPath);

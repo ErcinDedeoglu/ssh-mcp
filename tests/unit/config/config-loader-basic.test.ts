@@ -35,7 +35,7 @@ describe('ConfigLoader basic loading', () => {
   });
 
   it('throws on missing config file', () => {
-    expect(() => loadConfig()).toThrow('Config file not found at ~/.ssh-mcp/config.json');
+    expect(() => loadConfig()).toThrow('Config file not found');
   });
 
   it('expands ~ in config path', () => {
