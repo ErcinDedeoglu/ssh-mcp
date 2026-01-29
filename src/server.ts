@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import type { Config } from './config/types.js';
 import { ConnectionPool } from './ssh/pool.js';
 import { ForwardRegistry } from './ssh/forward-registry.js';
+import { RemoteForwardRegistry } from './ssh/remote-forward-registry.js';
 import { registerAllTools } from './tools/index.js';
 
 const SERVER_NAME = 'ssh-mcp';
@@ -12,6 +13,7 @@ export class SSHMCPServer {
   private readonly server: McpServer;
   private readonly pool: ConnectionPool;
   private readonly forwardRegistry: ForwardRegistry;
+  private readonly remoteForwardRegistry: RemoteForwardRegistry;
   private readonly config: Config;
   private transport: StdioServerTransport | null = null;
 
@@ -19,6 +21,7 @@ export class SSHMCPServer {
     this.config = config;
     this.pool = new ConnectionPool();
     this.forwardRegistry = new ForwardRegistry();
+    this.remoteForwardRegistry = new RemoteForwardRegistry();
     this.server = new McpServer(
       {
         name: SERVER_NAME,
@@ -31,7 +34,13 @@ export class SSHMCPServer {
       },
     );
 
-    registerAllTools(this.server, this.config, this.pool, this.forwardRegistry);
+    registerAllTools(
+      this.server,
+      this.config,
+      this.pool,
+      this.forwardRegistry,
+      this.remoteForwardRegistry,
+    );
   }
 
   async run(): Promise<void> {
@@ -40,6 +49,7 @@ export class SSHMCPServer {
   }
 
   async shutdown(): Promise<void> {
+    this.remoteForwardRegistry.clear();
     this.forwardRegistry.clear();
     this.pool.clear();
     await this.server.close();
@@ -51,5 +61,9 @@ export class SSHMCPServer {
 
   getForwardRegistry(): ForwardRegistry {
     return this.forwardRegistry;
+  }
+
+  getRemoteForwardRegistry(): RemoteForwardRegistry {
+    return this.remoteForwardRegistry;
   }
 }

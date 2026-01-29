@@ -95,15 +95,20 @@ Restart Claude Desktop after configuration.
 
 **`execute` is the primary tool.** Use it for all shell operations: `ls`, `cat`, `mkdir`, `rm`, `chmod`, `grep`, `ps`, file I/O, etc. Other tools exist only for operations impossible via shell commands.
 
-| Tool                | Purpose                                  |
-| ------------------- | ---------------------------------------- |
-| `list_servers`      | List configured servers                  |
-| `connect`           | Establish SSH connection                 |
-| `disconnect`        | Close SSH connection                     |
-| `execute`           | **Run any shell command**                |
-| `upload`            | SFTP upload (binary-safe, up to 100MB)   |
-| `download`          | SFTP download (binary-safe, up to 100MB) |
-| `connection_status` | Check connection health                  |
+| Tool                   | Purpose                                     |
+| ---------------------- | ------------------------------------------- |
+| `list_servers`         | List configured servers                     |
+| `connect`              | Establish SSH connection                    |
+| `disconnect`           | Close SSH connection                        |
+| `execute`              | **Run any shell command**                   |
+| `upload`               | SFTP upload (binary-safe, up to 100MB)      |
+| `download`             | SFTP download (binary-safe, up to 100MB)    |
+| `connection_status`    | Check connection health                     |
+| `forward_port`         | Local port forward (access remote services) |
+| `forward_remote_port`  | Remote port forward (expose local services) |
+| `list_forwards`        | List active port forwards                   |
+| `close_forward`        | Close a local port forward                  |
+| `close_remote_forward` | Close a remote port forward                 |
 
 ### execute
 

@@ -5,7 +5,7 @@
 - [x] Local port forwarding (`forward_port`) - Access remote databases, internal APIs
 - [x] List active tunnels (`list_forwards`) - Track what's forwarded
 - [x] Close tunnel (`close_forward`) - Cleanup resources
-- [ ] Remote port forwarding (`forward_remote_port`) - Expose local services to remote
+- [x] Remote port forwarding (`forward_remote_port`) - Expose local services to remote
 
 ## Medium Priority
 
