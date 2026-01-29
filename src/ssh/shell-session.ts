@@ -3,18 +3,21 @@ import {
   DEFAULT_SHELL_TIMEOUT_MS,
   DEFAULT_STALL_TIMEOUT_MS,
   MAX_OUTPUT_SIZE,
+  MAX_HISTORY_ENTRIES,
   generateMarker,
   buildShellInitCommands,
   wrapCommand,
   parseMarkedOutput,
+  createHistoryEntry,
   type ShellExecuteResult,
   type PendingCommand,
   type ShellSessionOptions,
   type ResolvedShellOptions,
   type ShellStream,
+  type HistoryEntry,
 } from './shell-session.types.js';
-import { waitForInitialPrompt, waitForMcpPrompt } from './shell-session.io.js';
-export type { ShellExecuteResult } from './shell-session.types.js';
+import { createShellStream, waitForInitialPrompt, waitForMcpPrompt } from './shell-session.io.js';
+export type { ShellExecuteResult, HistoryEntry } from './shell-session.types.js';
 
 export class ShellSession {
   private stream: ShellStream | null = null;
@@ -26,11 +29,13 @@ export class ShellSession {
   private stallTimer: ReturnType<typeof setTimeout> | null = null;
   private timeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private outputSize = 0;
+  private history: HistoryEntry[] = [];
+  private commandStartTime = 0;
 
-  constructor(options: ShellSessionOptions = {}) {
+  constructor(opts: ShellSessionOptions = {}) {
     this.options = {
-      timeoutMs: options.timeoutMs ?? DEFAULT_SHELL_TIMEOUT_MS,
-      stallTimeoutMs: options.stallTimeoutMs ?? DEFAULT_STALL_TIMEOUT_MS,
+      timeoutMs: opts.timeoutMs ?? DEFAULT_SHELL_TIMEOUT_MS,
+      stallTimeoutMs: opts.stallTimeoutMs ?? DEFAULT_STALL_TIMEOUT_MS,
     };
   }
   get isReady(): boolean {
@@ -38,8 +43,7 @@ export class ShellSession {
   }
   async initialize(client: Client): Promise<void> {
     if (this.stream) return;
-
-    this.stream = await this.createShellStream(client);
+    this.stream = await createShellStream(client);
     this.setupStreamHandlers();
     await waitForInitialPrompt(this.stream, this.options.timeoutMs);
     this.stream.write(buildShellInitCommands() + '\n');
@@ -67,7 +71,6 @@ export class ShellSession {
       }
     });
   }
-
   destroy(): void {
     this.clearTimers();
     this.rejectPendingCommands(new Error('Shell session destroyed'));
@@ -77,23 +80,14 @@ export class ShellSession {
     }
     this.ready = false;
     this.buffer = '';
-  }
-
-  private createShellStream(client: Client): Promise<ShellStream> {
-    return new Promise((resolve, reject) => {
-      client.shell({ term: 'dumb' }, (err, stream) => {
-        if (err) reject(err);
-        else resolve(stream as ShellStream);
-      });
-    });
+    this.history = [];
   }
 
   private setupStreamHandlers(): void {
     if (!this.stream) return;
-
-    this.stream.on('data', (data: Buffer) => this.handleData(data.toString()));
+    this.stream.on('data', (d: Buffer) => this.handleData(d.toString()));
     this.stream.on('close', () => this.handleClose());
-    this.stream.on('error', (err: Error) => this.handleError(err));
+    this.stream.on('error', (e: Error) => this.handleError(e));
   }
 
   private handleData(data: string): void {
@@ -136,6 +130,7 @@ export class ShellSession {
     this.currentCommand = this.commandQueue.shift()!;
     this.outputSize = 0;
     this.buffer = '';
+    this.commandStartTime = Date.now();
 
     this.startTimeoutTimer();
     this.startStallTimer();
@@ -148,9 +143,21 @@ export class ShellSession {
     if (!this.currentCommand) return;
 
     this.clearTimers();
+    this.recordHistory(this.currentCommand.command, output, exitCode);
     this.currentCommand.resolve({ stdout: output, stderr: '', exitCode });
     this.currentCommand = null;
     this.processNextCommand();
+  }
+
+  private recordHistory(command: string, stdout: string, exitCode: number): void {
+    this.history.push(
+      createHistoryEntry(command, stdout, exitCode, Date.now() - this.commandStartTime),
+    );
+    if (this.history.length > MAX_HISTORY_ENTRIES) this.history.shift();
+  }
+
+  getHistory(limit?: number): HistoryEntry[] {
+    return limit === 0 ? [] : this.history.slice(-(limit ?? this.history.length));
   }
 
   private startTimeoutTimer(): void {
@@ -161,38 +168,31 @@ export class ShellSession {
   }
 
   private startStallTimer(): void {
-    this.stallTimer = setTimeout(() => {
-      this.handleError(
-        new Error(`Command stalled - no output for ${this.options.stallTimeoutMs}ms`),
-      );
-    }, this.options.stallTimeoutMs);
+    const msg = `Command stalled - no output for ${this.options.stallTimeoutMs}ms`;
+    this.stallTimer = setTimeout(
+      () => this.handleError(new Error(msg)),
+      this.options.stallTimeoutMs,
+    );
   }
 
   private resetStallTimer(): void {
-    if (this.stallTimer) {
-      clearTimeout(this.stallTimer);
-      this.startStallTimer();
-    }
+    if (!this.stallTimer) return;
+    clearTimeout(this.stallTimer);
+    this.startStallTimer();
   }
 
   private clearTimers(): void {
-    if (this.timeoutTimer) {
-      clearTimeout(this.timeoutTimer);
-      this.timeoutTimer = null;
-    }
-    if (this.stallTimer) {
-      clearTimeout(this.stallTimer);
-      this.stallTimer = null;
-    }
+    if (this.timeoutTimer) clearTimeout(this.timeoutTimer);
+    if (this.stallTimer) clearTimeout(this.stallTimer);
+    this.timeoutTimer = this.stallTimer = null;
   }
+
   private rejectPendingCommands(error: Error): void {
     if (this.currentCommand) {
       this.currentCommand.reject(error);
       this.currentCommand = null;
     }
-    for (const pending of this.commandQueue) {
-      pending.reject(error);
-    }
+    this.commandQueue.forEach((p) => p.reject(error));
     this.commandQueue = [];
     this.clearTimers();
   }

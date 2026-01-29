@@ -6,11 +6,21 @@ export const MCP_PROMPT_CONTINUATION = '__MCP_PROMPT2__';
 export const DEFAULT_SHELL_TIMEOUT_MS = 30000;
 export const DEFAULT_STALL_TIMEOUT_MS = 10000;
 export const MAX_OUTPUT_SIZE = 10 * 1024 * 1024;
+export const MAX_HISTORY_ENTRIES = 100;
+export const MAX_HISTORY_OUTPUT_LENGTH = 50 * 1024;
 
 export interface ShellExecuteResult {
   stdout: string;
   stderr: string;
   exitCode: number;
+}
+
+export interface HistoryEntry {
+  timestamp: string;
+  command: string;
+  stdout: string;
+  exitCode: number;
+  durationMs: number;
 }
 
 export interface PendingCommand {
@@ -96,5 +106,25 @@ export function parseMarkedOutput(
     output,
     exitCode,
     remaining: remaining.replace(new RegExp(`^${MCP_PROMPT}`, 'g'), ''),
+  };
+}
+
+export function createHistoryEntry(
+  command: string,
+  stdout: string,
+  exitCode: number,
+  durationMs: number,
+): HistoryEntry {
+  const truncatedOutput =
+    stdout.length > MAX_HISTORY_OUTPUT_LENGTH
+      ? stdout.slice(0, MAX_HISTORY_OUTPUT_LENGTH) + '\n... (truncated)'
+      : stdout;
+
+  return {
+    timestamp: new Date().toISOString(),
+    command,
+    stdout: truncatedOutput,
+    exitCode,
+    durationMs,
   };
 }

@@ -1,4 +1,14 @@
+import type { Client } from 'ssh2';
 import { MCP_PROMPT, type ShellStream } from './shell-session.types.js';
+
+export function createShellStream(client: Client): Promise<ShellStream> {
+  return new Promise((resolve, reject) => {
+    client.shell({ term: 'dumb' }, (err, stream) => {
+      if (err) reject(err);
+      else resolve(stream as ShellStream);
+    });
+  });
+}
 
 export function waitForPattern(
   stream: ShellStream,

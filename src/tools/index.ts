@@ -18,6 +18,7 @@ import { registerListForwardsTool } from './list-forwards.js';
 import { registerForwardRemotePortTool } from './forward-remote-port.js';
 import { registerCloseRemoteForwardTool } from './close-remote-forward.js';
 import { registerJumpConnectTool } from './jump-connect.js';
+import { registerGetConsoleHistoryTool } from './get-console-history.js';
 
 export { sanitizeError, sanitizePath } from './utils.js';
 
@@ -42,6 +43,7 @@ export function registerAllTools(
   registerForwardRemotePortTool(server, pool, remoteForwardRegistry);
   registerCloseRemoteForwardTool(server, pool, remoteForwardRegistry);
   registerJumpConnectTool(server, config, pool, forwardRegistry, remoteForwardRegistry);
+  registerGetConsoleHistoryTool(server, shellRegistry);
 }
 
 export {
@@ -58,4 +60,5 @@ export {
   registerForwardRemotePortTool,
   registerCloseRemoteForwardTool,
   registerJumpConnectTool,
+  registerGetConsoleHistoryTool,
 };
