@@ -80,9 +80,9 @@
               "properties": {
                 "privateKey": {
                   "type": "string",
-                  "description": "Absolute path to SSH private key file (e.g., ~/.ssh/id_rsa). File must have 0600 permissions.",
+                  "description": "Path to SSH private key file (e.g., ~/.ssh/id_rsa) OR inline PEM content. Auto-detected: strings starting with '-----BEGIN' are treated as inline keys.",
                   "minLength": 1,
-                  "examples": ["/home/user/.ssh/id_rsa", "/home/user/.ssh/id_ed25519"]
+                  "examples": ["/home/user/.ssh/id_rsa", "-----BEGIN OPENSSH PRIVATE KEY-----\n..."]
                 },
                 "passphrase": {
                   "type": "string",

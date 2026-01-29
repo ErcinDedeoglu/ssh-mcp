@@ -37,7 +37,7 @@ export interface PasswordAuth {
  * Private key-based authentication
  */
 export interface PrivateKeyAuth {
-  /** Absolute path to SSH private key file */
+  /** Path to SSH private key file OR inline PEM content (auto-detected) */
   privateKey: string;
   /** Optional passphrase for encrypted private key */
   passphrase?: string;

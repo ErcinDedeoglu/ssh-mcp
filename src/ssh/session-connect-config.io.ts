@@ -38,7 +38,11 @@ export function buildSshConnectConfig(
   }
 
   if (isPrivateKeyAuth(serverConfig.auth)) {
-    const privateKeyContent = fs.readFileSync(serverConfig.auth.privateKey, 'utf-8');
+    const keyValue = serverConfig.auth.privateKey;
+    // Auto-detect: inline PEM content starts with "-----BEGIN", otherwise it's a file path
+    const privateKeyContent = keyValue.startsWith('-----BEGIN')
+      ? keyValue
+      : fs.readFileSync(keyValue, 'utf-8');
     return {
       ...baseConfig,
       privateKey: privateKeyContent,

@@ -21,7 +21,7 @@ npm install ssh-mcp
 
 ## Configuration
 
-Create `~/.ssh-mcp/config.json`:
+Create the config file at `~/.ssh-mcp/config.json` (Linux/macOS) or `%USERPROFILE%\.ssh-mcp\config.json` (Windows):
 
 ```json
 {
@@ -34,7 +34,17 @@ Create `~/.ssh-mcp/config.json`:
       "auth": {
         "privateKey": "~/.ssh/id_rsa"
       },
-      "description": "Production web server"
+      "description": "Production web server (key from file)"
+    },
+    {
+      "id": "prod-api",
+      "host": "api.example.com",
+      "port": 22,
+      "username": "deploy",
+      "auth": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNza...(inline key content)...\n-----END OPENSSH PRIVATE KEY-----"
+      },
+      "description": "Production API server (inline key)"
     },
     {
       "id": "dev-db",
@@ -96,22 +106,22 @@ Restart Claude Desktop after configuration.
 
 **`execute` is the primary tool.** Use it for all shell operations: `ls`, `cat`, `mkdir`, `rm`, `chmod`, `grep`, `ps`, file I/O, etc. Other tools exist only for operations impossible via shell commands.
 
-| Tool                   | Purpose                                     |
-| ---------------------- | ------------------------------------------- |
-| `list_servers`         | List configured servers                     |
-| `connect`              | Establish SSH connection                    |
-| `disconnect`           | Close SSH connection                        |
-| `execute`              | **Run any shell command**                   |
-| `get_console_history`  | Retrieve previous command outputs           |
-| `upload`               | SFTP upload (binary-safe, up to 100MB)      |
-| `download`             | SFTP download (binary-safe, up to 100MB)    |
-| `connection_status`    | Check connection health                     |
-| `jump_connect`         | Connect through a jump host (bastion)       |
-| `forward_port`         | Local port forward (access remote services) |
-| `forward_remote_port`  | Remote port forward (expose local services) |
-| `list_forwards`        | List active port forwards                   |
-| `close_forward`        | Close a local port forward                  |
-| `close_remote_forward` | Close a remote port forward                 |
+| Tool                   | Purpose                                       |
+| ---------------------- | --------------------------------------------- |
+| `list_servers`         | List configured servers (auto-reloads config) |
+| `connect`              | Establish SSH connection                      |
+| `disconnect`           | Close SSH connection                          |
+| `execute`              | **Run any shell command**                     |
+| `get_console_history`  | Retrieve previous command outputs             |
+| `upload`               | SFTP upload (binary-safe, up to 100MB)        |
+| `download`             | SFTP download (binary-safe, up to 100MB)      |
+| `connection_status`    | Check connection health                       |
+| `jump_connect`         | Connect through a jump host (bastion)         |
+| `forward_port`         | Local port forward (access remote services)   |
+| `forward_remote_port`  | Remote port forward (expose local services)   |
+| `list_forwards`        | List active port forwards                     |
+| `close_forward`        | Close a local port forward                    |
+| `close_remote_forward` | Close a remote port forward                   |
 
 ### execute
 
@@ -153,7 +163,15 @@ Parameters: serverId, localPath, remotePath
 Limits: 100MB max
 ```
 
-### connect / disconnect / list_servers / connection_status
+### list_servers
+
+Lists all configured servers with their connection status. **Automatically reloads config** from disk on each call, so you can edit `~/.ssh-mcp/config.json` and see changes immediately without restarting.
+
+```
+Returns: Array of { id, host, port, username, connected, description? }
+```
+
+### connect / disconnect / connection_status
 
 Connection lifecycle management. Protocol-level operations that can't be done via shell.
 
