@@ -115,4 +115,33 @@ describe.skipIf(!isDockerRunning())('E2E Port Forwarding - Connection Tracking',
 
     session.disconnect();
   }, 30000);
+
+  it('handles rapid forward create/delete cycles', async () => {
+    const ctx = getCtx();
+    const forwardRegistry = getRegistry();
+    const session = new SessionKeeper(ctx.server1Config, { maxReconnectAttempts: 0 });
+    await session.connect();
+
+    const cycles = 10;
+    for (let i = 0; i < cycles; i++) {
+      const result = await createLocalForward(
+        {
+          client: session.client,
+          serverId: 'server-1',
+          localHost: '127.0.0.1',
+          localPort: 0,
+          remoteHost: 'localhost',
+          remotePort: 2222,
+        },
+        forwardRegistry,
+      );
+
+      expect(forwardRegistry.has(result.localHost, result.localPort)).toBe(true);
+      forwardRegistry.remove(result.localHost, result.localPort);
+      expect(forwardRegistry.has(result.localHost, result.localPort)).toBe(false);
+    }
+
+    expect(forwardRegistry.size).toBe(0);
+    session.disconnect();
+  }, 30000);
 });

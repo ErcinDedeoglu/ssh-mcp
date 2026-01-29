@@ -33,7 +33,7 @@
 
 - [x] **Large data transfer** - Stress test in `port-forward-connections.e2e.test.ts` verifies >1MB through SSH command execution.
 - [x] **Server shutdown cleanup verification** - Test in `tests/integration/server.test.ts` verifies `shutdown()` closes all forward servers and sockets.
-- [ ] **Rapid forward create/delete cycles** - Stress test forward lifecycle
+- [x] **Rapid forward create/delete cycles** - Test in `port-forward-connections.e2e.test.ts` runs 10 create/delete cycles.
 
 ## Security Debt (SECURITY.md claims but not implemented)
 
