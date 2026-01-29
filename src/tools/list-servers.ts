@@ -16,6 +16,7 @@ function refreshConfig(config: Config): void {
   const fresh = loadConfig();
   config.servers.length = 0;
   config.servers.push(...fresh.servers);
+  if (fresh.keys) config.keys = fresh.keys;
   if (fresh.defaults) config.defaults = fresh.defaults;
 }
 

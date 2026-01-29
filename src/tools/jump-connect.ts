@@ -1,12 +1,21 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
+import { loadConfig } from '../config/loader.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { RemoteForwardRegistry } from '../ssh/remote-forward-registry.js';
 import { SessionKeeper } from '../ssh/session.js';
 import { createJumpStream } from '../ssh/jump-stream.js';
 import { sanitizeError } from './utils.js';
+
+function refreshConfig(config: Config): void {
+  const fresh = loadConfig();
+  config.servers.length = 0;
+  config.servers.push(...fresh.servers);
+  if (fresh.keys) config.keys = fresh.keys;
+  if (fresh.defaults) config.defaults = fresh.defaults;
+}
 
 const JUMP_CONNECTION_NO_RECONNECT = 0;
 
@@ -20,13 +29,15 @@ export function registerJumpConnectTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'jump_connect',
-    'Connect to a server through a jump host (bastion). Jump host must be connected first.',
+    'Connect to a server through a jump host (bastion). Auto-reloads config. Jump host must be connected first.',
     {
       jumpServerId: z.string().describe('Server ID of the connected jump host (bastion)'),
       targetServerId: z.string().describe('Server ID of the target server to connect to'),
     },
     async ({ jumpServerId, targetServerId }: { jumpServerId: string; targetServerId: string }) => {
       try {
+        refreshConfig(config);
+
         if (pool.has(targetServerId)) {
           const existing = pool.get(targetServerId);
           if (existing?.isConnected) {

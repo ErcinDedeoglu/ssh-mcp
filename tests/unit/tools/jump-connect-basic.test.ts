@@ -38,6 +38,26 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => true),
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
+vi.mock('../../../src/config/loader.js', () => ({
+  loadConfig: vi.fn(() => ({
+    servers: [
+      {
+        id: 'jump-host',
+        host: '192.168.1.1',
+        port: 22,
+        username: 'admin',
+        auth: { password: 'jump-secret' },
+      },
+      {
+        id: 'target-server',
+        host: '10.0.0.5',
+        port: 22,
+        username: 'user',
+        auth: { password: 'target-secret' },
+      },
+    ],
+  })),
+}));
 
 function getMockClient(index: number): EventEmitter & { forwardOut: ReturnType<typeof vi.fn> } {
   return mockInstances[index] as EventEmitter & { forwardOut: ReturnType<typeof vi.fn> };
