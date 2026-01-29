@@ -102,6 +102,7 @@ Restart Claude Desktop after configuration.
 | `connect`              | Establish SSH connection                    |
 | `disconnect`           | Close SSH connection                        |
 | `execute`              | **Run any shell command**                   |
+| `get_console_history`  | Retrieve previous command outputs           |
 | `upload`               | SFTP upload (binary-safe, up to 100MB)      |
 | `download`             | SFTP download (binary-safe, up to 100MB)    |
 | `connection_status`    | Check connection health                     |
@@ -131,6 +132,17 @@ execute("./run-tests.sh")       # sees DEBUG=1
 ```
 
 Shell sessions are automatically destroyed on disconnect.
+
+### get_console_history
+
+Retrieve previous command outputs from the shell session. Useful for reviewing what happened or checking outputs from earlier commands.
+
+```
+Parameters: serverId, limit (optional, default: all)
+Returns: Array of { timestamp, command, stdout, exitCode, durationMs }
+```
+
+**Limits:** 100 entries max per server, 50KB max per output (truncated if larger). History is cleared on disconnect.
 
 ### upload / download
 
