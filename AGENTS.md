@@ -111,3 +111,21 @@ npm run typecheck     # tsc --noEmit
 - Test scripts auto-manage Docker lifecycle
 - 203 total tests: 140 unit + 63 E2E
 - Mock pattern: `vi.hoisted()` for early mock setup, instance tracking arrays
+
+---
+
+## Tool Design Philosophy
+
+**`execute` is the primary tool. Use it for everything.**
+
+Shell commands cover: `ls`, `cat`, `mkdir`, `rm`, `chmod`, `stat`, `grep`, `find`, `ps`, `kill`, file I/O via `echo`/`cat`, `base64`, `tar`, `curl`, `wget`, etc.
+
+**Only add a dedicated tool when `execute` is literally impossible:**
+
+| Tool                 | Why `execute` can't do it                 |
+| -------------------- | ----------------------------------------- |
+| `connect/disconnect` | SSH protocol session management           |
+| `upload/download`    | SFTP subsystem - binary-safe, files >10MB |
+| `connection_status`  | SSH session state inspection              |
+| Port forwarding      | SSH protocol TCP channel multiplexing     |
+| Jump hosts           | Nested SSH connections through bastion    |

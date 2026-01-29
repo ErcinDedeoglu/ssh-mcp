@@ -56,6 +56,7 @@ Create `~/.ssh-mcp/config.json`:
 ```
 
 **Important:** Set file permissions to 0600:
+
 ```bash
 chmod 600 ~/.ssh-mcp/config.json
 ```
@@ -92,91 +93,80 @@ Restart Claude Desktop after configuration.
 
 ## Tools
 
-### list_servers
-List all configured SSH servers with their connection status.
+**`execute` is the primary tool.** Use it for all shell operations: `ls`, `cat`, `mkdir`, `rm`, `chmod`, `grep`, `ps`, file I/O, etc. Other tools exist only for operations impossible via shell commands.
 
-### connect
-Connect to an SSH server. Reuses existing connection if already connected.
-
-**Parameters:**
-- `serverId` (required): Unique identifier of the server
-
-### disconnect
-Close an SSH connection to a server.
-
-**Parameters:**
-- `serverId` (required): Unique identifier of the server
+| Tool                | Purpose                                  |
+| ------------------- | ---------------------------------------- |
+| `list_servers`      | List configured servers                  |
+| `connect`           | Establish SSH connection                 |
+| `disconnect`        | Close SSH connection                     |
+| `execute`           | **Run any shell command**                |
+| `upload`            | SFTP upload (binary-safe, up to 100MB)   |
+| `download`          | SFTP download (binary-safe, up to 100MB) |
+| `connection_status` | Check connection health                  |
 
 ### execute
-Execute a shell command on a connected SSH server.
 
-**Parameters:**
-- `serverId` (required): Server to execute on
-- `command` (required): Shell command to run
-- `timeout` (optional): Command timeout in seconds
+**The core tool.** Runs any shell command on the remote server.
 
-**Returns:** stdout, stderr, exitCode
+```
+Parameters: serverId, command, timeout (optional)
+Returns: stdout, stderr, exitCode
+```
 
-### upload
-Upload a file to a connected SSH server via SFTP.
+### upload / download
 
-**Parameters:**
-- `serverId` (required): Target server
-- `localPath` (required): Absolute path to local file
-- `remotePath` (required): Destination path (supports ~)
+Use only for binary files or files >10MB. For text files, prefer `execute` with `cat`/`echo`.
 
-**Limits:** Maximum file size 100MB
+```
+Parameters: serverId, localPath, remotePath
+Limits: 100MB max
+```
 
-### download
-Download a file from a connected SSH server via SFTP.
+### connect / disconnect / list_servers / connection_status
 
-**Parameters:**
-- `serverId` (required): Source server
-- `remotePath` (required): Path on remote server (supports ~)
-- `localPath` (required): Local destination path
-
-**Limits:** Maximum file size 100MB
-
-### connection_status
-Check the health and status of an SSH connection.
-
-**Parameters:**
-- `serverId` (required): Server to check
-
-**Returns:** connected, idle, reconnecting status, last activity
+Connection lifecycle management. Protocol-level operations that can't be done via shell.
 
 ## Troubleshooting
 
 ### "Config file not found"
+
 Create `~/.ssh-mcp/config.json` with at least one server defined.
 
 ### "Insecure file permissions"
+
 Run `chmod 600 ~/.ssh-mcp/config.json` to restrict access.
 
 ### "Authentication failed"
+
 - For key auth: Verify key path and permissions (0600)
 - For password auth: Check credentials
 - Verify the username is correct
 
 ### "Connection timeout"
+
 - Check network connectivity to the host
 - Verify the host and port are correct
 - Check firewall rules
 
 ### "Command timeout"
+
 Increase the timeout in config or pass `timeout` parameter to execute.
 
 ### Connection drops frequently
+
 The server uses keep-alive (30s interval) and auto-reconnection (5 attempts with exponential backoff). If issues persist, check network stability.
 
 ## Security
 
 See [SECURITY.md](./SECURITY.md) for:
+
 - Threat model
 - Credential handling best practices
 - Error sanitization rules
 
 **Key points:**
+
 - Config file requires 0600 permissions
 - Credentials never appear in logs or error messages
 - SSH keys are recommended over passwords
