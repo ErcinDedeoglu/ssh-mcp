@@ -1,5 +1,12 @@
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
+import maxLinesRule from './eslint-rules/max-lines.cjs';
+
+const localPlugin = {
+  rules: {
+    'max-lines': maxLinesRule,
+  },
+};
 
 const commonRules = {
   ...tseslint.configs.recommended.rules,
@@ -8,6 +15,7 @@ const commonRules = {
   '@typescript-eslint/no-explicit-any': 'warn',
   '@typescript-eslint/no-floating-promises': 'error',
   '@typescript-eslint/no-misused-promises': 'error',
+  'local/max-lines': ['error', 200],
 };
 
 export default [
@@ -23,6 +31,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint,
+      local: localPlugin,
     },
     rules: commonRules,
   },
