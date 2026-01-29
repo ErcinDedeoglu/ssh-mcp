@@ -32,3 +32,6 @@ yarn-error.log*
 # Temporary files
 *.tmp
 .cache/
+
+# Sisyphus
+.sisyphus/
