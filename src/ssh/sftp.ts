@@ -76,7 +76,7 @@ export class FileTransfer {
 
     for (const part of parts) {
       currentPath += '/' + part;
-      
+
       const exists = await new Promise<boolean>((resolve) => {
         sftp.stat(currentPath, (err) => {
           resolve(!err);
@@ -122,7 +122,9 @@ export class FileTransfer {
                 .then(() => {
                   sftp.fastPut(localPath, expandedRemotePath, (retryErr) => {
                     if (retryErr) {
-                      reject(this.formatError(retryErr as Error & { code?: number | string }, 'Upload'));
+                      reject(
+                        this.formatError(retryErr as Error & { code?: number | string }, 'Upload'),
+                      );
                       return;
                     }
                     resolve();
@@ -165,7 +167,9 @@ export class FileTransfer {
     });
 
     if (remoteStats.size > MAX_FILE_SIZE) {
-      throw new Error(`File too large: ${remoteStats.size} bytes exceeds ${MAX_FILE_SIZE} byte limit`);
+      throw new Error(
+        `File too large: ${remoteStats.size} bytes exceeds ${MAX_FILE_SIZE} byte limit`,
+      );
     }
 
     const doDownload = (): Promise<void> => {

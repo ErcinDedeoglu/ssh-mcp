@@ -6,7 +6,7 @@ export class ConnectionPool {
   add(connection: SessionKeeper): void {
     const serverId = connection.id;
     this.connections.set(serverId, connection);
-    
+
     // Only remove from pool when max retries reached (permanent disconnection)
     // Don't remove during reconnection attempts
     connection.on('max-retries-reached', () => {

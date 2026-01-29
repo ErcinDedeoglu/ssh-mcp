@@ -3,10 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { sanitizeError } from './utils.js';
 
-export function registerDisconnectTool(
-  server: McpServer,
-  pool: ConnectionPool
-): void {
+export function registerDisconnectTool(server: McpServer, pool: ConnectionPool): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'disconnect',
@@ -51,6 +48,6 @@ export function registerDisconnectTool(
           ],
         };
       }
-    }
+    },
   );
 }

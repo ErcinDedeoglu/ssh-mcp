@@ -4,17 +4,20 @@
 
 ## Overview
 
-7 MCP tools. Each file exports `registerXxxTool()`, called from `index.ts`.
+10 MCP tools. Each file exports `registerXxxTool()`, called from `index.ts`.
 
-| Tool                | File                 | Parameters                      |
-| ------------------- | -------------------- | ------------------------------- |
-| `list_servers`      | list-servers.ts      | none                            |
-| `connect`           | connect.ts           | serverId                        |
-| `disconnect`        | disconnect.ts        | serverId                        |
-| `execute`           | execute.ts           | serverId, command, timeout?     |
-| `upload`            | upload.ts            | serverId, localPath, remotePath |
-| `download`          | download.ts          | serverId, remotePath, localPath |
-| `connection_status` | connection-status.ts | serverId                        |
+| Tool                | File                 | Parameters                                               |
+| ------------------- | -------------------- | -------------------------------------------------------- |
+| `list_servers`      | list-servers.ts      | none                                                     |
+| `connect`           | connect.ts           | serverId                                                 |
+| `disconnect`        | disconnect.ts        | serverId                                                 |
+| `execute`           | execute.ts           | serverId, command, timeout?                              |
+| `upload`            | upload.ts            | serverId, localPath, remotePath                          |
+| `download`          | download.ts          | serverId, remotePath, localPath                          |
+| `connection_status` | connection-status.ts | serverId                                                 |
+| `forward_port`      | forward-port.ts      | serverId, remoteHost, remotePort, localHost?, localPort? |
+| `close_forward`     | close-forward.ts     | localPort, localHost?                                    |
+| `list_forwards`     | list-forwards.ts     | serverId?                                                |
 
 ## Adding a New Tool
 

@@ -10,6 +10,8 @@ services:
       - PASSWORD_ACCESS=true
       - USER_NAME=testuser
       - USER_PASSWORD=testpass123
+    volumes:
+      - ./tests/e2e/config/sshd_config:/etc/ssh/sshd_config:ro
     ports:
       - '2222:2222'
     healthcheck:
@@ -29,6 +31,8 @@ services:
       - PASSWORD_ACCESS=true
       - USER_NAME=admin
       - USER_PASSWORD=admin456
+    volumes:
+      - ./tests/e2e/config/sshd_config:/etc/ssh/sshd_config:ro
     ports:
       - '2223:2222'
     healthcheck:
@@ -50,6 +54,7 @@ services:
       - PUBLIC_KEY_FILE=/keys/authorized_keys
     volumes:
       - ./tests/e2e/keys:/keys:ro
+      - ./tests/e2e/config/sshd_config:/etc/ssh/sshd_config:ro
     ports:
       - '2224:2222'
     healthcheck:

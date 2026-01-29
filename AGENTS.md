@@ -4,7 +4,7 @@
 
 ## Overview
 
-MCP server exposing 7 SSH tools (connect, execute, upload/download, etc.) via stdio transport. Uses ssh2 library with connection pooling and auto-reconnection.
+MCP server exposing 10 SSH tools (connect, execute, upload/download, port forwarding, etc.) via stdio transport. Uses ssh2 library with connection pooling and auto-reconnection.
 
 ## Structure
 
@@ -20,10 +20,12 @@ src/
 │   ├── session.types.ts        # Types, constants, pure functions (calculateReconnectDelay, safeEmitError)
 │   ├── session-connect-config.io.ts  # buildSshConnectConfig() - auth config builder
 │   ├── pool.ts                 # ConnectionPool: Map<serverId, SessionKeeper>
+│   ├── forward-registry.ts     # ForwardRegistry: tracks active port forwards
+│   ├── local-forward.ts        # createLocalForward(): net.Server + ssh2 forwardOut()
 │   ├── connection.ts           # DEAD CODE - ignore
 │   └── sftp.ts                 # FileTransfer: upload/download with 100MB limit
 └── tools/            # See src/tools/AGENTS.md
-    └── *.ts          # 7 MCP tools, each registerXxxTool()
+    └── *.ts          # 10 MCP tools, each registerXxxTool()
 
 tests/
 ├── unit/             # Vitest mocks, no network (140 tests)
@@ -34,25 +36,27 @@ tests/
 
 ## Where to Look
 
-| Task                        | Location                                                                               |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| Add new MCP tool            | `src/tools/` - see subdirectory AGENTS.md                                              |
-| Change connection behavior  | `src/ssh/session.ts` SessionKeeper class                                               |
-| Modify reconnection logic   | `src/ssh/session.ts` startReconnection(), `session.types.ts` calculateReconnectDelay() |
-| Change file transfer limits | `src/ssh/sftp.ts` MAX_FILE_SIZE constant                                               |
-| Add config validation       | `src/config/loader.ts` CONFIG_SCHEMA object                                            |
-| Add new config field        | `src/config/types.ts` + update CONFIG_SCHEMA                                           |
-| Debug auth issues           | `src/ssh/session-connect-config.io.ts` buildSshConnectConfig()                         |
-| Add E2E tests               | `tests/e2e/ssh/` - see subdirectory AGENTS.md                                          |
+| Task                         | Location                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------- |
+| Add new MCP tool             | `src/tools/` - see subdirectory AGENTS.md                                              |
+| Change connection behavior   | `src/ssh/session.ts` SessionKeeper class                                               |
+| Modify reconnection logic    | `src/ssh/session.ts` startReconnection(), `session.types.ts` calculateReconnectDelay() |
+| Change file transfer limits  | `src/ssh/sftp.ts` MAX_FILE_SIZE constant                                               |
+| Add config validation        | `src/config/loader.ts` CONFIG_SCHEMA object                                            |
+| Add new config field         | `src/config/types.ts` + update CONFIG_SCHEMA                                           |
+| Debug auth issues            | `src/ssh/session-connect-config.io.ts` buildSshConnectConfig()                         |
+| Change port forward behavior | `src/ssh/local-forward.ts` createLocalForward()                                        |
+| Add E2E tests                | `tests/e2e/ssh/` - see subdirectory AGENTS.md                                          |
 
 ## Code Map
 
-| Class            | Purpose                                        | Key Methods                                  |
-| ---------------- | ---------------------------------------------- | -------------------------------------------- |
-| `SSHMCPServer`   | Main server, wires everything                  | `run()`, `shutdown()`                        |
-| `SessionKeeper`  | Single SSH connection with keepalive/reconnect | `connect()`, `disconnect()`, `healthCheck()` |
-| `ConnectionPool` | Manages multiple SessionKeepers                | `add()`, `get()`, `remove()`, `clear()`      |
-| `FileTransfer`   | SFTP operations                                | `upload()`, `download()`                     |
+| Class             | Purpose                                        | Key Methods                                      |
+| ----------------- | ---------------------------------------------- | ------------------------------------------------ |
+| `SSHMCPServer`    | Main server, wires everything                  | `run()`, `shutdown()`                            |
+| `SessionKeeper`   | Single SSH connection with keepalive/reconnect | `connect()`, `disconnect()`, `healthCheck()`     |
+| `ConnectionPool`  | Manages multiple SessionKeepers                | `add()`, `get()`, `remove()`, `clear()`          |
+| `FileTransfer`    | SFTP operations                                | `upload()`, `download()`                         |
+| `ForwardRegistry` | Tracks active port forwards                    | `add()`, `get()`, `remove()`, `removeByServer()` |
 
 ### SessionKeeper Events
 

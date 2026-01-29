@@ -4,7 +4,7 @@
 
 ## Overview
 
-SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool (registry), FileTransfer (SFTP).
+SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool (registry), FileTransfer (SFTP), ForwardRegistry (port forwarding).
 
 ## Structure
 
@@ -15,6 +15,8 @@ SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool 
 | `session-connect-config.io.ts` | buildSshConnectConfig(): auth config builder for ssh2            | 44    |
 | `pool.ts`                      | ConnectionPool: Map registry with auto-removal on max-retries    | 43    |
 | `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, recursive mkdir  | 185   |
+| `forward-registry.ts`          | ForwardRegistry: tracks active port forwards, cleanup on close   | 95    |
+| `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring      | 96    |
 | `connection.ts`                | **DEAD CODE** - never use, kept for reference only               | 135   |
 
 ## SessionKeeper State Machine
@@ -64,6 +66,8 @@ DISCONNECTED → connect() → CONNECTED
 | Fix path expansion for macOS | `sftp.ts` expandRemotePath()                           |
 | Change pool behavior         | `pool.ts` - simple Map, add/remove/clear               |
 | Modify auth config building  | `session-connect-config.io.ts` buildSshConnectConfig() |
+| Change port forward behavior | `local-forward.ts` createLocalForward()                |
+| Modify forward tracking      | `forward-registry.ts` ForwardRegistry class            |
 
 ## Anti-Patterns
 

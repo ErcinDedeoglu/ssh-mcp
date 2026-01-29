@@ -2,10 +2,10 @@
 
 ## High Priority
 
-- [ ] Local port forwarding (`forward_port`) - Access remote databases, internal APIs
+- [x] Local port forwarding (`forward_port`) - Access remote databases, internal APIs
+- [x] List active tunnels (`list_forwards`) - Track what's forwarded
+- [x] Close tunnel (`close_forward`) - Cleanup resources
 - [ ] Remote port forwarding (`forward_remote_port`) - Expose local services to remote
-- [ ] List active tunnels (`list_forwards`) - Track what's forwarded
-- [ ] Close tunnel (`unforward_port`) - Cleanup resources
 
 ## Medium Priority
 
@@ -16,6 +16,24 @@
 - [ ] Dynamic SOCKS proxy - Route all traffic through SSH
 - [ ] SSH agent forwarding - Git operations from remote using local keys
 - [ ] Persistent shell sessions - Maintain cwd/env across commands
+
+## Test Gaps (Port Forwarding)
+
+### High Priority
+
+- [ ] **SSH disconnect during active forward** - Test what happens to tunneled connections when SSH drops mid-transfer. Current behavior unknown.
+- [ ] **Forward survival after SSH reconnect** - Forwards hold reference to old SSH client. After auto-reconnect, forwards are likely broken. Need test to verify + potential fix.
+
+### Medium Priority
+
+- [ ] **Tool input validation** - Test invalid port numbers (-1, 70000, non-integer), empty/invalid hosts, SQL injection in host strings
+- [ ] **Port already in use (OS level)** - Test EADDRINUSE when localPort conflicts with system port (not just registry duplicate)
+
+### Low Priority
+
+- [ ] **Large data transfer through tunnel** - Stress test streaming >1MB through forwarded port
+- [ ] **Server shutdown cleanup verification** - Explicit test that `SSHMCPServer.shutdown()` properly closes all forwards
+- [ ] **Rapid forward create/delete cycles** - Stress test forward lifecycle
 
 ## Security Debt (SECURITY.md claims but not implemented)
 

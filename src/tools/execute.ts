@@ -14,11 +14,7 @@ export interface ExecuteResult {
   exitCode: number;
 }
 
-export function registerExecuteTool(
-  server: McpServer,
-  config: Config,
-  pool: ConnectionPool
-): void {
+export function registerExecuteTool(server: McpServer, config: Config, pool: ConnectionPool): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'execute',
@@ -26,9 +22,20 @@ export function registerExecuteTool(
     {
       serverId: z.string().describe('Unique identifier of the server to execute command on'),
       command: z.string().describe('Shell command to execute on the remote server'),
-      timeout: z.number().optional().describe('Command timeout in seconds (overrides server config)'),
+      timeout: z
+        .number()
+        .optional()
+        .describe('Command timeout in seconds (overrides server config)'),
     },
-    async ({ serverId, command, timeout }: { serverId: string; command: string; timeout?: number }) => {
+    async ({
+      serverId,
+      command,
+      timeout,
+    }: {
+      serverId: string;
+      command: string;
+      timeout?: number;
+    }) => {
       try {
         const session = pool.get(serverId);
         if (!session) {
@@ -56,10 +63,11 @@ export function registerExecuteTool(
         }
 
         const serverConfig = config.servers.find((s) => s.id === serverId);
-        const timeoutSeconds = timeout 
-          ?? serverConfig?.timeouts?.command 
-          ?? config.defaults?.timeouts?.command 
-          ?? DEFAULT_COMMAND_TIMEOUT_SECONDS;
+        const timeoutSeconds =
+          timeout ??
+          serverConfig?.timeouts?.command ??
+          config.defaults?.timeouts?.command ??
+          DEFAULT_COMMAND_TIMEOUT_SECONDS;
 
         const result = await executeCommand(session.client, command, timeoutSeconds);
         session.touch();
@@ -87,7 +95,7 @@ export function registerExecuteTool(
           ],
         };
       }
-    }
+    },
   );
 }
 
@@ -98,9 +106,11 @@ interface ExecStream extends NodeJS.ReadableStream {
 }
 
 function executeCommand(
-  client: { exec: (cmd: string, callback: (err: Error | undefined, stream: ExecStream) => void) => void },
+  client: {
+    exec: (cmd: string, callback: (err: Error | undefined, stream: ExecStream) => void) => void;
+  },
   command: string,
-  timeoutSeconds: number
+  timeoutSeconds: number,
 ): Promise<ExecuteResult> {
   return new Promise((resolve, reject) => {
     const timeoutMs = timeoutSeconds * MS_PER_SECOND;

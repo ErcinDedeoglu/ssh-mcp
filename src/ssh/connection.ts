@@ -60,7 +60,7 @@ export class SSHConnection extends EventEmitter {
 
   private buildConnectConfig(): ConnectConfig {
     const timeoutSeconds = this.config.timeouts?.connection ?? DEFAULT_CONNECTION_TIMEOUT_SECONDS;
-    
+
     const baseConfig: ConnectConfig = {
       host: this.config.host,
       port: this.config.port,
@@ -90,7 +90,8 @@ export class SSHConnection extends EventEmitter {
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       let settled = false;
-      const timeoutMs = (this.config.timeouts?.connection ?? DEFAULT_CONNECTION_TIMEOUT_SECONDS) * MS_PER_SECOND;
+      const timeoutMs =
+        (this.config.timeouts?.connection ?? DEFAULT_CONNECTION_TIMEOUT_SECONDS) * MS_PER_SECOND;
 
       const timeoutId = setTimeout(() => {
         if (settled) return;

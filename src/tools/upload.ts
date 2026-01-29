@@ -4,10 +4,7 @@ import { ConnectionPool } from '../ssh/pool.js';
 import { FileTransfer, MAX_FILE_SIZE } from '../ssh/sftp.js';
 import { sanitizeError, sanitizePath } from './utils.js';
 
-export function registerUploadTool(
-  server: McpServer,
-  pool: ConnectionPool
-): void {
+export function registerUploadTool(server: McpServer, pool: ConnectionPool): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'upload',
@@ -15,9 +12,19 @@ export function registerUploadTool(
     {
       serverId: z.string().describe('Unique identifier of the server to upload to'),
       localPath: z.string().describe('Absolute path to the local file to upload'),
-      remotePath: z.string().describe('Destination path on the remote server (supports ~ for home directory)'),
+      remotePath: z
+        .string()
+        .describe('Destination path on the remote server (supports ~ for home directory)'),
     },
-    async ({ serverId, localPath, remotePath }: { serverId: string; localPath: string; remotePath: string }) => {
+    async ({
+      serverId,
+      localPath,
+      remotePath,
+    }: {
+      serverId: string;
+      localPath: string;
+      remotePath: string;
+    }) => {
       try {
         const session = pool.get(serverId);
         if (!session) {
@@ -72,6 +79,6 @@ export function registerUploadTool(
           ],
         };
       }
-    }
+    },
   );
 }

@@ -5,11 +5,7 @@ import { ConnectionPool } from '../ssh/pool.js';
 import { SessionKeeper } from '../ssh/session.js';
 import { sanitizeError } from './utils.js';
 
-export function registerConnectTool(
-  server: McpServer,
-  config: Config,
-  pool: ConnectionPool
-): void {
+export function registerConnectTool(server: McpServer, config: Config, pool: ConnectionPool): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'connect',
@@ -49,7 +45,8 @@ export function registerConnectTool(
         }
 
         const sessionOptions = {
-          idleTimeoutMs: (serverConfig.timeouts?.idle ?? config.defaults?.timeouts?.idle ?? 900) * 1000,
+          idleTimeoutMs:
+            (serverConfig.timeouts?.idle ?? config.defaults?.timeouts?.idle ?? 900) * 1000,
         };
 
         const session = new SessionKeeper(serverConfig, sessionOptions);
@@ -81,6 +78,6 @@ export function registerConnectTool(
           ],
         };
       }
-    }
+    },
   );
 }

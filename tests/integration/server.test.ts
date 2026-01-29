@@ -85,10 +85,18 @@ describe('SSHMCPServer', () => {
       expect(server).toBeDefined();
     });
 
-    it('registers all 7 tools', async () => {
+    it('registers all 10 tools', async () => {
       const { SSHMCPServer } = await import('../../src/server.js');
       const server = new SSHMCPServer(config);
       expect(server).toBeDefined();
+    });
+
+    it('creates ForwardRegistry instance', async () => {
+      const { SSHMCPServer } = await import('../../src/server.js');
+      const server = new SSHMCPServer(config);
+      const registry = server.getForwardRegistry();
+      expect(registry).toBeDefined();
+      expect(registry.size).toBe(0);
     });
   });
 
@@ -102,6 +110,17 @@ describe('SSHMCPServer', () => {
 
       await server.shutdown();
       expect(pool.size).toBe(0);
+    });
+
+    it('clears forward registry on shutdown', async () => {
+      const { SSHMCPServer } = await import('../../src/server.js');
+      const server = new SSHMCPServer(config);
+
+      const registry = server.getForwardRegistry();
+      expect(registry.size).toBe(0);
+
+      await server.shutdown();
+      expect(registry.size).toBe(0);
     });
   });
 
@@ -118,43 +137,20 @@ describe('SSHMCPServer', () => {
   });
 
   describe('tool registration', () => {
-    it('has list_servers tool available', async () => {
-      const { SSHMCPServer } = await import('../../src/server.js');
-      const server = new SSHMCPServer(config);
-      expect(server).toBeDefined();
-    });
+    const expectedTools = [
+      'list_servers',
+      'connect',
+      'disconnect',
+      'execute',
+      'upload',
+      'download',
+      'connection_status',
+      'forward_port',
+      'close_forward',
+      'list_forwards',
+    ];
 
-    it('has connect tool available', async () => {
-      const { SSHMCPServer } = await import('../../src/server.js');
-      const server = new SSHMCPServer(config);
-      expect(server).toBeDefined();
-    });
-
-    it('has disconnect tool available', async () => {
-      const { SSHMCPServer } = await import('../../src/server.js');
-      const server = new SSHMCPServer(config);
-      expect(server).toBeDefined();
-    });
-
-    it('has execute tool available', async () => {
-      const { SSHMCPServer } = await import('../../src/server.js');
-      const server = new SSHMCPServer(config);
-      expect(server).toBeDefined();
-    });
-
-    it('has upload tool available', async () => {
-      const { SSHMCPServer } = await import('../../src/server.js');
-      const server = new SSHMCPServer(config);
-      expect(server).toBeDefined();
-    });
-
-    it('has download tool available', async () => {
-      const { SSHMCPServer } = await import('../../src/server.js');
-      const server = new SSHMCPServer(config);
-      expect(server).toBeDefined();
-    });
-
-    it('has connection_status tool available', async () => {
+    it.each(expectedTools)('has %s tool available', async () => {
       const { SSHMCPServer } = await import('../../src/server.js');
       const server = new SSHMCPServer(config);
       expect(server).toBeDefined();

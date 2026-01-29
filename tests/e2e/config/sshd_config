@@ -1,0 +1,9 @@
+Port 2222
+PasswordAuthentication yes
+AllowTcpForwarding yes
+GatewayPorts no
+X11Forwarding no
+PermitRootLogin no
+AuthorizedKeysFile .ssh/authorized_keys
+PidFile /config/sshd.pid
+Subsystem sftp internal-sftp

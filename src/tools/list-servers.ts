@@ -14,7 +14,7 @@ export interface ServerInfo {
 export function registerListServersTool(
   server: McpServer,
   config: Config,
-  pool: ConnectionPool
+  pool: ConnectionPool,
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
@@ -38,6 +38,6 @@ export function registerListServersTool(
           },
         ],
       };
-    }
+    },
   );
 }
