@@ -9,7 +9,7 @@
       "auth": {
         "password": "testpass123"
       },
-      "description": "Test SSH Server 1"
+      "description": "Test SSH Server 1 (password auth)"
     },
     {
       "id": "test-server-2",
@@ -19,7 +19,28 @@
       "auth": {
         "password": "admin456"
       },
-      "description": "Test SSH Server 2"
+      "description": "Test SSH Server 2 (password auth)"
+    },
+    {
+      "id": "test-server-key",
+      "host": "localhost",
+      "port": 2224,
+      "username": "keyuser",
+      "auth": {
+        "privateKey": "./tests/e2e/keys/test_key"
+      },
+      "description": "Test SSH Server 3 (key auth, no passphrase)"
+    },
+    {
+      "id": "test-server-key-passphrase",
+      "host": "localhost",
+      "port": 2224,
+      "username": "keyuser",
+      "auth": {
+        "privateKey": "./tests/e2e/keys/test_key_passphrase",
+        "passphrase": "testpassphrase123"
+      },
+      "description": "Test SSH Server 3 (key auth, with passphrase)"
     }
   ],
   "defaults": {

@@ -11,9 +11,9 @@ services:
       - USER_NAME=testuser
       - USER_PASSWORD=testpass123
     ports:
-      - "2222:2222"
+      - '2222:2222'
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2222"]
+      test: ['CMD', 'nc', '-z', 'localhost', '2222']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -30,9 +30,30 @@ services:
       - USER_NAME=admin
       - USER_PASSWORD=admin456
     ports:
-      - "2223:2222"
+      - '2223:2222'
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2222"]
+      test: ['CMD', 'nc', '-z', 'localhost', '2222']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ssh-server-key:
+    image: linuxserver/openssh-server:latest
+    container_name: ssh-mcp-test-key
+    hostname: test-server-key
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - PASSWORD_ACCESS=false
+      - USER_NAME=keyuser
+      - PUBLIC_KEY_FILE=/keys/authorized_keys
+    volumes:
+      - ./tests/e2e/keys:/keys:ro
+    ports:
+      - '2224:2222'
+    healthcheck:
+      test: ['CMD', 'nc', '-z', 'localhost', '2222']
       interval: 5s
       timeout: 3s
       retries: 5
