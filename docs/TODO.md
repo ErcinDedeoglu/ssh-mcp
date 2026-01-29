@@ -21,12 +21,12 @@
 
 ### High Priority
 
-- [ ] **SSH disconnect during active forward** - Test what happens to tunneled connections when SSH drops mid-transfer. Current behavior unknown.
-- [ ] **Forward survival after SSH reconnect** - Forwards hold reference to old SSH client. After auto-reconnect, forwards are likely broken. Need test to verify + potential fix.
+- [x] **SSH disconnect during active forward** - Forwards are cleaned up on disconnect. Tests in `port-forward-disconnect.e2e.test.ts` (4 tests).
+- [x] **Forward survival after SSH reconnect** - Forwards are intentionally removed on disconnect; can be re-created after reconnect. Tests in `port-forward-disconnect-recovery.e2e.test.ts` (2 tests).
 
 ### Medium Priority
 
-- [ ] **Tool input validation** - Test invalid port numbers (-1, 70000, non-integer), empty/invalid hosts, SQL injection in host strings
+- [x] **Tool input validation** - Added `.max(65535)` to port schemas, `.min(1)` to host schemas. Tests in `forward-port-validation.test.ts` (17 tests).
 - [ ] **Port already in use (OS level)** - Test EADDRINUSE when localPort conflicts with system port (not just registry duplicate)
 
 ### Low Priority
