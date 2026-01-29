@@ -44,7 +44,12 @@ describe('connect', () => {
     const { registerConnectTool } = await import('../../../src/tools/connect.js');
 
     const mockServer = createMockServer();
-    registerConnectTool(mockServer as unknown as McpServer, ctx.config, ctx.pool);
+    registerConnectTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('connect')!;
 
@@ -73,7 +78,12 @@ describe('connect', () => {
     ctx.pool.add(session);
 
     const mockServer = createMockServer();
-    registerConnectTool(mockServer as unknown as McpServer, ctx.config, ctx.pool);
+    registerConnectTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('connect')!;
     const result = await handler({ serverId: 'test-server' });
@@ -86,7 +96,12 @@ describe('connect', () => {
     const { registerConnectTool } = await import('../../../src/tools/connect.js');
 
     const mockServer = createMockServer();
-    registerConnectTool(mockServer as unknown as McpServer, ctx.config, ctx.pool);
+    registerConnectTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('connect')!;
     const result = await handler({ serverId: 'unknown-server' });

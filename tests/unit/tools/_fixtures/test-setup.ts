@@ -1,7 +1,7 @@
-// Common test setup for MCP tool tests
 import { vi } from 'vitest';
 import type { Config, ServerConfig, PasswordAuth } from '../../../../src/config/types.js';
 import { ConnectionPool } from '../../../../src/ssh/pool.js';
+import { ForwardRegistry } from '../../../../src/ssh/forward-registry.js';
 
 export function createServerConfig(): ServerConfig {
   return {
@@ -32,6 +32,7 @@ export function createConfig(serverConfig: ServerConfig): Config {
 export interface TestContext {
   config: Config;
   pool: ConnectionPool;
+  forwardRegistry: ForwardRegistry;
   serverConfig: ServerConfig;
 }
 
@@ -40,7 +41,8 @@ export function createTestContext(): TestContext {
   const serverConfig = createServerConfig();
   const config = createConfig(serverConfig);
   const pool = new ConnectionPool();
-  return { config, pool, serverConfig };
+  const forwardRegistry = new ForwardRegistry();
+  return { config, pool, forwardRegistry, serverConfig };
 }
 
 export { createMockServer, type MockServer } from './mock-server.js';

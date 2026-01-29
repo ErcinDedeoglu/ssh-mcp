@@ -23,7 +23,7 @@ export function registerAllTools(
   forwardRegistry: ForwardRegistry,
 ): void {
   registerListServersTool(server, config, pool);
-  registerConnectTool(server, config, pool);
+  registerConnectTool(server, config, pool, forwardRegistry);
   registerDisconnectTool(server, pool);
   registerExecuteTool(server, config, pool);
   registerUploadTool(server, pool);

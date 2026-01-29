@@ -37,33 +37,38 @@ export function createLocalForward(
         activeSockets.delete(socket);
       });
 
-      client.forwardOut(
-        localHost,
-        localPort,
-        remoteHost,
-        remotePort,
-        (err: Error | undefined, stream: ClientChannel) => {
-          if (err) {
-            socket.destroy();
-            activeSockets.delete(socket);
-            return;
-          }
+      try {
+        client.forwardOut(
+          localHost,
+          localPort,
+          remoteHost,
+          remotePort,
+          (err: Error | undefined, stream: ClientChannel) => {
+            if (err) {
+              socket.destroy();
+              activeSockets.delete(socket);
+              return;
+            }
 
-          socket.pipe(stream).pipe(socket);
+            socket.pipe(stream).pipe(socket);
 
-          stream.on('error', () => {
-            socket.destroy();
-          });
+            stream.on('error', () => {
+              socket.destroy();
+            });
 
-          stream.on('close', () => {
-            socket.end();
-          });
+            stream.on('close', () => {
+              socket.end();
+            });
 
-          socket.on('close', () => {
-            stream.close();
-          });
-        },
-      );
+            socket.on('close', () => {
+              stream.close();
+            });
+          },
+        );
+      } catch {
+        socket.destroy();
+        activeSockets.delete(socket);
+      }
     });
 
     localServer.on('error', (serverError: Error) => {
