@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Generated: 2026-01-29 | Commit: cc3ffc3 | Branch: master -->
+<!-- Generated: 2026-01-29 | Commit: 32abaf9 | Branch: master -->
 
 ## Overview
 
@@ -15,17 +15,19 @@ src/
 ├── config/
 │   ├── loader.ts     # loadConfig(): JSON Schema validation via AJV, 0600 permission check
 │   └── types.ts      # Config, ServerConfig, auth type guards
-├── ssh/
+├── ssh/              # See src/ssh/AGENTS.md
 │   ├── session.ts    # SessionKeeper: EventEmitter wrapping ssh2 Client, auto-reconnect
 │   ├── pool.ts       # ConnectionPool: Map<serverId, SessionKeeper>
-│   ├── connection.ts # SSHConnection: UNUSED legacy class (ignore)
+│   ├── connection.ts # DEAD CODE - ignore
 │   └── sftp.ts       # FileTransfer: upload/download with 100MB limit
 └── tools/            # See src/tools/AGENTS.md
     └── *.ts          # 7 MCP tools, each registerXxxTool()
 
 tests/
-├── unit/             # Vitest mocks, no network
-└── e2e/              # Docker SSH container, real connections
+├── unit/             # Vitest mocks, no network (140 tests)
+├── integration/      # SSHMCPServer with mocked transport
+└── e2e/              # See tests/e2e/ssh/AGENTS.md
+    └── ssh/          # Docker SSH containers, real connections (63 tests)
 ```
 
 ## Where to Look
@@ -39,6 +41,7 @@ tests/
 | Add config validation       | `src/config/loader.ts` CONFIG_SCHEMA object                         |
 | Add new config field        | `src/config/types.ts` + update CONFIG_SCHEMA                        |
 | Debug auth issues           | `src/ssh/session.ts` buildConnectConfig()                           |
+| Add E2E tests               | `tests/e2e/ssh/` - see subdirectory AGENTS.md                       |
 
 ## Code Map
 
@@ -77,7 +80,7 @@ tests/
 
 ## Anti-Patterns (Project-Specific)
 
-**Type Cast in Tools**: All tools use `(server.tool as any)` due to SDK typing limitations. Do NOT "fix" this - SDK types don't match runtime API.
+**Type Cast in Tools**: All tools use `(server.tool as any)` due to SDK typing limitations. Do NOT "fix" this.
 
 **Unused SSHConnection Class**: `src/ssh/connection.ts` is DEAD CODE. Use `SessionKeeper` instead.
 
@@ -85,7 +88,6 @@ tests/
 
 - File transfer: 100MB (`src/ssh/sftp.ts` MAX_FILE_SIZE)
 - Command output: 10MB (`src/tools/execute.ts` MAX_OUTPUT_SIZE)
-- To change: modify constants, but consider memory implications.
 
 **Home Directory Expansion**: `expandHomePath()` in sftp.ts assumes Linux paths (`/home/${username}`). Does not work on macOS or Windows servers.
 
@@ -102,7 +104,8 @@ npm run typecheck     # tsc --noEmit
 
 ## Testing Notes
 
-- E2E tests use `tests/e2e/docker/` - container starts/stops automatically
-- Test config fixtures in `tests/fixtures/`
-- Mock patterns: `vi.mock()` with factory functions
+- E2E tests in `tests/e2e/ssh/` - modular structure with shared setup
+- Docker containers: 3 SSH servers (password auth, key auth, key+passphrase)
+- Test scripts auto-manage Docker lifecycle
 - 203 total tests: 140 unit + 63 E2E
+- Mock pattern: `vi.hoisted()` for early mock setup, instance tracking arrays
