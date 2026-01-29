@@ -31,6 +31,20 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => true),
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
+vi.mock('../../../src/config/loader.js', () => ({
+  loadConfig: vi.fn(() => ({
+    servers: [
+      {
+        id: 'test-server',
+        host: '192.168.1.100',
+        port: 22,
+        username: 'ubuntu',
+        description: 'Test server',
+        auth: { password: 'test' },
+      },
+    ],
+  })),
+}));
 
 describe('list_servers', () => {
   let ctx: TestContext;

@@ -1,5 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
+import { loadConfig } from '../config/loader.js';
 import type { ConnectionPool } from '../ssh/pool.js';
 
 export interface ServerInfo {
@@ -11,6 +12,13 @@ export interface ServerInfo {
   connected: boolean;
 }
 
+function refreshConfig(config: Config): void {
+  const fresh = loadConfig();
+  config.servers.length = 0;
+  config.servers.push(...fresh.servers);
+  if (fresh.defaults) config.defaults = fresh.defaults;
+}
+
 export function registerListServersTool(
   server: McpServer,
   config: Config,
@@ -19,8 +27,9 @@ export function registerListServersTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'list_servers',
-    'List all configured SSH servers with their connection status',
+    'List all configured SSH servers with their connection status (auto-reloads config)',
     async () => {
+      refreshConfig(config);
       const servers: ServerInfo[] = config.servers.map((serverConfig) => ({
         id: serverConfig.id,
         host: serverConfig.host,
