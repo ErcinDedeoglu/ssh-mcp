@@ -53,6 +53,7 @@ export function registerConnectTool(
         const sessionOptions = {
           idleTimeoutMs:
             (serverConfig.timeouts?.idle ?? config.defaults?.timeouts?.idle ?? 900) * 1000,
+          keys: config.keys,
         };
 
         const session = new SessionKeeper(serverConfig, sessionOptions);

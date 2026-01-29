@@ -19,10 +19,12 @@ export interface SessionKeeperOptions {
   baseReconnectDelayMs?: number;
   maxReconnectDelayMs?: number;
   jumpStream?: Duplex;
+  keys?: Record<string, string>;
 }
 
-export type ResolvedSessionOptions = Omit<Required<SessionKeeperOptions>, 'jumpStream'> & {
+export type ResolvedSessionOptions = Omit<Required<SessionKeeperOptions>, 'jumpStream' | 'keys'> & {
   jumpStream?: Duplex;
+  keys?: Record<string, string>;
 };
 
 export interface SessionKeeperEvents {

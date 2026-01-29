@@ -10,9 +10,20 @@ import {
   type SessionKeeperOptions,
 } from './session.types.js';
 
-type OptionsWithJumpStream = Omit<Required<SessionKeeperOptions>, 'jumpStream'> & {
+type OptionsWithJumpStream = Omit<Required<SessionKeeperOptions>, 'jumpStream' | 'keys'> & {
   jumpStream?: Duplex;
+  keys?: Record<string, string>;
 };
+
+function resolvePrivateKey(keyValue: string, keys?: Record<string, string>): string {
+  if (keyValue.startsWith('-----BEGIN')) {
+    return keyValue;
+  }
+  if (keys && keyValue in keys) {
+    return resolvePrivateKey(keys[keyValue], keys);
+  }
+  return fs.readFileSync(keyValue, 'utf-8');
+}
 
 export function buildSshConnectConfig(
   serverConfig: ServerConfig,
@@ -38,11 +49,7 @@ export function buildSshConnectConfig(
   }
 
   if (isPrivateKeyAuth(serverConfig.auth)) {
-    const keyValue = serverConfig.auth.privateKey;
-    // Auto-detect: inline PEM content starts with "-----BEGIN", otherwise it's a file path
-    const privateKeyContent = keyValue.startsWith('-----BEGIN')
-      ? keyValue
-      : fs.readFileSync(keyValue, 'utf-8');
+    const privateKeyContent = resolvePrivateKey(serverConfig.auth.privateKey, options.keys);
     return {
       ...baseConfig,
       privateKey: privateKeyContent,

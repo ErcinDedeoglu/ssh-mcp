@@ -84,6 +84,8 @@ export interface Defaults {
 export interface Config {
   /** List of SSH server configurations */
   servers: ServerConfig[];
+  /** Named SSH private keys that can be referenced by alias in server auth */
+  keys?: Record<string, string>;
   /** Default settings applied to all servers */
   defaults?: Defaults;
 }

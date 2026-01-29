@@ -103,4 +103,72 @@ describe('buildSshConnectConfig - privateKey detection', () => {
       });
     });
   });
+
+  describe('key alias resolution', () => {
+    const inlineKey =
+      '-----BEGIN OPENSSH PRIVATE KEY-----\nalias-resolved\n-----END OPENSSH PRIVATE KEY-----';
+
+    it('resolves alias from keys map', () => {
+      const config = createServerConfig({ privateKey: 'main-key' });
+      const optionsWithKeys = { ...mockOptions, keys: { 'main-key': inlineKey } };
+
+      const result = buildSshConnectConfig(config, optionsWithKeys);
+
+      expect(fs.readFileSync).not.toHaveBeenCalled();
+      expect(result.privateKey).toBe(inlineKey);
+    });
+
+    it('resolves alias to file path', () => {
+      const fileContent =
+        '-----BEGIN OPENSSH PRIVATE KEY-----\nfromfile\n-----END OPENSSH PRIVATE KEY-----';
+      vi.mocked(fs.readFileSync).mockReturnValue(fileContent);
+
+      const config = createServerConfig({ privateKey: 'my-key' });
+      const optionsWithKeys = { ...mockOptions, keys: { 'my-key': '/path/to/key' } };
+
+      const result = buildSshConnectConfig(config, optionsWithKeys);
+
+      expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/key', 'utf-8');
+      expect(result.privateKey).toBe(fileContent);
+    });
+
+    it('resolves chained aliases', () => {
+      const config = createServerConfig({ privateKey: 'alias1' });
+      const optionsWithKeys = {
+        ...mockOptions,
+        keys: { alias1: 'alias2', alias2: inlineKey },
+      };
+
+      const result = buildSshConnectConfig(config, optionsWithKeys);
+
+      expect(result.privateKey).toBe(inlineKey);
+    });
+
+    it('falls back to file path when alias not found', () => {
+      const fileContent =
+        '-----BEGIN OPENSSH PRIVATE KEY-----\nfb\n-----END OPENSSH PRIVATE KEY-----';
+      vi.mocked(fs.readFileSync).mockReturnValue(fileContent);
+
+      const config = createServerConfig({ privateKey: 'not-an-alias' });
+      const optionsWithKeys = { ...mockOptions, keys: { 'other-key': inlineKey } };
+
+      const result = buildSshConnectConfig(config, optionsWithKeys);
+
+      expect(fs.readFileSync).toHaveBeenCalledWith('not-an-alias', 'utf-8');
+      expect(result.privateKey).toBe(fileContent);
+    });
+
+    it('works without keys option (backward compatibility)', () => {
+      const fileContent =
+        '-----BEGIN OPENSSH PRIVATE KEY-----\nbc\n-----END OPENSSH PRIVATE KEY-----';
+      vi.mocked(fs.readFileSync).mockReturnValue(fileContent);
+
+      const config = createServerConfig({ privateKey: '/path/to/key' });
+
+      const result = buildSshConnectConfig(config, mockOptions);
+
+      expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/key', 'utf-8');
+      expect(result.privateKey).toBe(fileContent);
+    });
+  });
 });

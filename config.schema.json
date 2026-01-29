@@ -14,6 +14,21 @@
         "$ref": "#/definitions/server"
       }
     },
+    "keys": {
+      "type": "object",
+      "description": "Named SSH private keys that can be referenced by alias in server auth. Keys can be file paths or inline PEM content.",
+      "additionalProperties": {
+        "type": "string",
+        "description": "SSH private key: file path (e.g., ~/.ssh/id_rsa) or inline PEM content",
+        "minLength": 1
+      },
+      "examples": [
+        {
+          "main-key": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+          "backup-key": "~/.ssh/id_rsa_backup"
+        }
+      ]
+    },
     "defaults": {
       "type": "object",
       "description": "Default settings applied to all servers unless overridden",
@@ -36,7 +51,7 @@
         "id": {
           "type": "string",
           "description": "Unique identifier for this server. Used in MCP tool calls to target specific servers.",
-          "pattern": "^[a-zA-Z0-9_-]+$",
+          "pattern": "^[a-zA-Z0-9._-]+$",
           "minLength": 1,
           "maxLength": 64,
           "examples": ["prod-web-01", "dev-db", "staging-api"]
@@ -62,7 +77,7 @@
         },
         "auth": {
           "type": "object",
-          "description": "Authentication method: either password or private key (mutually exclusive)",
+          "description": "Authentication method: password or privateKey (mutually exclusive)",
           "oneOf": [
             {
               "required": ["password"],
@@ -80,9 +95,13 @@
               "properties": {
                 "privateKey": {
                   "type": "string",
-                  "description": "Path to SSH private key file (e.g., ~/.ssh/id_rsa) OR inline PEM content. Auto-detected: strings starting with '-----BEGIN' are treated as inline keys.",
+                  "description": "SSH private key. Auto-detected format: (1) inline PEM if starts with '-----BEGIN', (2) alias if matches a key name in top-level 'keys' section, (3) file path otherwise.",
                   "minLength": 1,
-                  "examples": ["/home/user/.ssh/id_rsa", "-----BEGIN OPENSSH PRIVATE KEY-----\n..."]
+                  "examples": [
+                    "/home/user/.ssh/id_rsa",
+                    "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+                    "main-key"
+                  ]
                 },
                 "passphrase": {
                   "type": "string",

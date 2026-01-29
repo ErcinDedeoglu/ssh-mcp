@@ -42,6 +42,7 @@ export class SessionKeeper extends EventEmitter {
       baseReconnectDelayMs: options.baseReconnectDelayMs ?? DEFAULT_BASE_RECONNECT_DELAY_MS,
       maxReconnectDelayMs: options.maxReconnectDelayMs ?? DEFAULT_MAX_RECONNECT_DELAY_MS,
       jumpStream: options.jumpStream,
+      keys: options.keys,
     };
     this.sshClient = new Client();
     this.setupEventHandlers();
@@ -65,7 +66,6 @@ export class SessionKeeper extends EventEmitter {
   get isJumpConnection(): boolean {
     return this.options.jumpStream !== undefined;
   }
-
   get isIdle(): boolean {
     if (this._lastActivity === 0) return false;
     return Date.now() - this._lastActivity > this.options.idleTimeoutMs;

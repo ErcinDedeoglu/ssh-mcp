@@ -25,6 +25,9 @@ Create the config file at `~/.ssh-mcp/config.json` (Linux/macOS) or `%USERPROFIL
 
 ```json
 {
+  "keys": {
+    "main-key": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNza...(key content)...\n-----END OPENSSH PRIVATE KEY-----"
+  },
   "servers": [
     {
       "id": "prod-web",
@@ -32,9 +35,9 @@ Create the config file at `~/.ssh-mcp/config.json` (Linux/macOS) or `%USERPROFIL
       "port": 22,
       "username": "ubuntu",
       "auth": {
-        "privateKey": "~/.ssh/id_rsa"
+        "privateKey": "main-key"
       },
-      "description": "Production web server (key from file)"
+      "description": "Production web server (key alias)"
     },
     {
       "id": "prod-api",
@@ -42,9 +45,9 @@ Create the config file at `~/.ssh-mcp/config.json` (Linux/macOS) or `%USERPROFIL
       "port": 22,
       "username": "deploy",
       "auth": {
-        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNza...(inline key content)...\n-----END OPENSSH PRIVATE KEY-----"
+        "privateKey": "main-key"
       },
-      "description": "Production API server (inline key)"
+      "description": "Production API server (same key alias)"
     },
     {
       "id": "dev-db",
@@ -52,8 +55,9 @@ Create the config file at `~/.ssh-mcp/config.json` (Linux/macOS) or `%USERPROFIL
       "port": 22,
       "username": "admin",
       "auth": {
-        "password": "your-password"
-      }
+        "privateKey": "~/.ssh/id_rsa"
+      },
+      "description": "Dev database (key from file)"
     }
   ],
   "defaults": {
@@ -65,6 +69,18 @@ Create the config file at `~/.ssh-mcp/config.json` (Linux/macOS) or `%USERPROFIL
   }
 }
 ```
+
+### privateKey formats
+
+The `privateKey` field auto-detects format:
+
+| Format     | Detection                        | Example                                      |
+| ---------- | -------------------------------- | -------------------------------------------- |
+| Inline PEM | Starts with `-----BEGIN`         | `"-----BEGIN OPENSSH PRIVATE KEY-----\n..."` |
+| Key alias  | Matches a name in `keys` section | `"main-key"`                                 |
+| File path  | Everything else                  | `"~/.ssh/id_rsa"`                            |
+
+Use the `keys` section to define a key once and reference it by alias across multiple servers.
 
 **Important:** Set file permissions to 0600:
 

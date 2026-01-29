@@ -82,6 +82,7 @@ export function registerJumpConnectTool(
             (targetConfig.timeouts?.idle ?? config.defaults?.timeouts?.idle ?? 900) * 1000,
           maxReconnectAttempts: JUMP_CONNECTION_NO_RECONNECT,
           jumpStream,
+          keys: config.keys,
         };
 
         const targetSession = new SessionKeeper(targetConfig, sessionOptions);
