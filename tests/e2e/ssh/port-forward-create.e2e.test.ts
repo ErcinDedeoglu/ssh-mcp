@@ -123,4 +123,43 @@ describe.skipIf(!isDockerRunning())('E2E Port Forwarding - createLocalForward', 
 
     session.disconnect();
   });
+
+  it('rejects with EADDRINUSE when port is already bound by another process', async () => {
+    const ctx = getCtx();
+    const forwardRegistry = getRegistry();
+    const session = new SessionKeeper(ctx.server1Config, { maxReconnectAttempts: 0 });
+    await session.connect();
+
+    const blockerServer = net.createServer();
+    const blockedPort = await new Promise<number>((resolve, reject) => {
+      blockerServer.listen(0, '127.0.0.1', () => {
+        const addr = blockerServer.address();
+        if (addr && typeof addr !== 'string') {
+          resolve(addr.port);
+        } else {
+          reject(new Error('Failed to get port'));
+        }
+      });
+    });
+
+    try {
+      await createLocalForward(
+        {
+          client: session.client,
+          serverId: 'server-1',
+          localHost: '127.0.0.1',
+          localPort: blockedPort,
+          remoteHost: 'localhost',
+          remotePort: 2222,
+        },
+        forwardRegistry,
+      );
+      expect.fail('Should have thrown EADDRINUSE');
+    } catch (error) {
+      expect((error as NodeJS.ErrnoException).code).toBe('EADDRINUSE');
+    } finally {
+      blockerServer.close();
+      session.disconnect();
+    }
+  });
 });

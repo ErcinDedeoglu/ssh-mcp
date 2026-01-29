@@ -27,7 +27,7 @@
 ### Medium Priority
 
 - [x] **Tool input validation** - Added `.max(65535)` to port schemas, `.min(1)` to host schemas. Tests in `forward-port-validation.test.ts` (17 tests).
-- [ ] **Port already in use (OS level)** - Test EADDRINUSE when localPort conflicts with system port (not just registry duplicate)
+- [x] **Port already in use (OS level)** - E2E test in `port-forward-create.e2e.test.ts` verifies EADDRINUSE when port bound by another process.
 
 ### Low Priority
 
