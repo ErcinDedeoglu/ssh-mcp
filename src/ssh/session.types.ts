@@ -1,5 +1,6 @@
 // SessionKeeper types, interfaces, constants, and pure utility functions.
 import type { EventEmitter } from 'node:events';
+import type { Duplex } from 'node:stream';
 
 export const DEFAULT_KEEPALIVE_INTERVAL_MS = 30000;
 export const DEFAULT_KEEPALIVE_COUNT_MAX = 3;
@@ -17,7 +18,12 @@ export interface SessionKeeperOptions {
   maxReconnectAttempts?: number;
   baseReconnectDelayMs?: number;
   maxReconnectDelayMs?: number;
+  jumpStream?: Duplex;
 }
+
+export type ResolvedSessionOptions = Omit<Required<SessionKeeperOptions>, 'jumpStream'> & {
+  jumpStream?: Duplex;
+};
 
 export interface SessionKeeperEvents {
   connected: (serverId: string) => void;

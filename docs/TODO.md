@@ -9,7 +9,7 @@
 
 ## Medium Priority
 
-- [ ] Jump host support (`jump_connect`) - Reach servers behind bastions
+- [x] Jump host support (`jump_connect`) - Reach servers behind bastions
 
 ## Low Priority
 

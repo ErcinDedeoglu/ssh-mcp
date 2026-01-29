@@ -1,5 +1,6 @@
 // Builds ssh2 ConnectConfig from server configuration. Reads private key files from disk.
 import * as fs from 'node:fs';
+import type { Duplex } from 'node:stream';
 import type { ConnectConfig } from 'ssh2';
 import type { ServerConfig } from '../config/types.js';
 import { isPasswordAuth, isPrivateKeyAuth } from '../config/types.js';
@@ -9,9 +10,13 @@ import {
   type SessionKeeperOptions,
 } from './session.types.js';
 
+type OptionsWithJumpStream = Omit<Required<SessionKeeperOptions>, 'jumpStream'> & {
+  jumpStream?: Duplex;
+};
+
 export function buildSshConnectConfig(
   serverConfig: ServerConfig,
-  options: Required<SessionKeeperOptions>,
+  options: OptionsWithJumpStream,
 ): ConnectConfig {
   const timeoutSeconds = serverConfig.timeouts?.connection ?? DEFAULT_CONNECTION_TIMEOUT_SECONDS;
 
@@ -22,6 +27,7 @@ export function buildSshConnectConfig(
     readyTimeout: timeoutSeconds * MS_PER_SECOND,
     keepaliveInterval: options.keepaliveIntervalMs,
     keepaliveCountMax: options.keepaliveCountMax,
+    sock: options.jumpStream,
   };
 
   if (isPasswordAuth(serverConfig.auth)) {

@@ -104,6 +104,7 @@ Restart Claude Desktop after configuration.
 | `upload`               | SFTP upload (binary-safe, up to 100MB)      |
 | `download`             | SFTP download (binary-safe, up to 100MB)    |
 | `connection_status`    | Check connection health                     |
+| `jump_connect`         | Connect through a jump host (bastion)       |
 | `forward_port`         | Local port forward (access remote services) |
 | `forward_remote_port`  | Remote port forward (expose local services) |
 | `list_forwards`        | List active port forwards                   |

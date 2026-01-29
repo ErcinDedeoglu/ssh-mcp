@@ -15,14 +15,14 @@ import {
   safeEmitError,
   type SessionKeeperOptions,
   type HealthStatus,
+  type ResolvedSessionOptions,
 } from './session.types.js';
 import { buildSshConnectConfig } from './session-connect-config.io.js';
 
 export type { SessionKeeperOptions, HealthStatus, SessionKeeperEvents } from './session.types.js';
-
 export class SessionKeeper extends EventEmitter {
   private readonly config: ServerConfig;
-  private readonly options: Required<SessionKeeperOptions>;
+  private readonly options: ResolvedSessionOptions;
   private sshClient: Client;
   private connected = false;
   private intentionalDisconnect = false;
@@ -41,6 +41,7 @@ export class SessionKeeper extends EventEmitter {
       maxReconnectAttempts: options.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT_ATTEMPTS,
       baseReconnectDelayMs: options.baseReconnectDelayMs ?? DEFAULT_BASE_RECONNECT_DELAY_MS,
       maxReconnectDelayMs: options.maxReconnectDelayMs ?? DEFAULT_MAX_RECONNECT_DELAY_MS,
+      jumpStream: options.jumpStream,
     };
     this.sshClient = new Client();
     this.setupEventHandlers();
@@ -49,21 +50,20 @@ export class SessionKeeper extends EventEmitter {
   get id(): string {
     return this.config.id;
   }
-
   get isConnected(): boolean {
     return this.connected;
   }
-
   get client(): Client {
     return this.sshClient;
   }
-
   get username(): string {
     return this.config.username;
   }
-
   get lastActivity(): number {
     return this._lastActivity;
+  }
+  get isJumpConnection(): boolean {
+    return this.options.jumpStream !== undefined;
   }
 
   get isIdle(): boolean {
