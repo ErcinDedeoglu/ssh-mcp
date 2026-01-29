@@ -8,12 +8,14 @@ SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool 
 
 ## Structure
 
-| File            | Purpose                                                          | Lines |
-| --------------- | ---------------------------------------------------------------- | ----- |
-| `session.ts`    | SessionKeeper: EventEmitter-based connection with auto-reconnect | 266   |
-| `pool.ts`       | ConnectionPool: Map registry with auto-removal on max-retries    | 44    |
-| `sftp.ts`       | FileTransfer: upload/download with 100MB limit, recursive mkdir  | 185   |
-| `connection.ts` | **DEAD CODE** - never use, kept for reference only               | 135   |
+| File                           | Purpose                                                          | Lines |
+| ------------------------------ | ---------------------------------------------------------------- | ----- |
+| `session.ts`                   | SessionKeeper: EventEmitter-based connection with auto-reconnect | 199   |
+| `session.types.ts`             | Types, constants, pure functions (calculateReconnectDelay, etc.) | 52    |
+| `session-connect-config.io.ts` | buildSshConnectConfig(): auth config builder for ssh2            | 44    |
+| `pool.ts`                      | ConnectionPool: Map registry with auto-removal on max-retries    | 43    |
+| `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, recursive mkdir  | 185   |
+| `connection.ts`                | **DEAD CODE** - never use, kept for reference only               | 135   |
 
 ## SessionKeeper State Machine
 
@@ -43,24 +45,25 @@ DISCONNECTED → connect() → CONNECTED
 
 ## Constants
 
-| Constant                          | Value             | Location   |
-| --------------------------------- | ----------------- | ---------- |
-| `DEFAULT_KEEPALIVE_INTERVAL_MS`   | 30000             | session.ts |
-| `DEFAULT_MAX_RECONNECT_ATTEMPTS`  | 5                 | session.ts |
-| `DEFAULT_BASE_RECONNECT_DELAY_MS` | 1000              | session.ts |
-| `DEFAULT_MAX_RECONNECT_DELAY_MS`  | 30000             | session.ts |
-| `DEFAULT_IDLE_TIMEOUT_MS`         | 900000            | session.ts |
-| `MAX_FILE_SIZE`                   | 104857600 (100MB) | sftp.ts    |
+| Constant                          | Value             | Location         |
+| --------------------------------- | ----------------- | ---------------- |
+| `DEFAULT_KEEPALIVE_INTERVAL_MS`   | 30000             | session.types.ts |
+| `DEFAULT_MAX_RECONNECT_ATTEMPTS`  | 5                 | session.types.ts |
+| `DEFAULT_BASE_RECONNECT_DELAY_MS` | 1000              | session.types.ts |
+| `DEFAULT_MAX_RECONNECT_DELAY_MS`  | 30000             | session.types.ts |
+| `DEFAULT_IDLE_TIMEOUT_MS`         | 900000            | session.types.ts |
+| `MAX_FILE_SIZE`                   | 104857600 (100MB) | sftp.ts          |
 
 ## Where to Look
 
-| Task                         | Location                                   |
-| ---------------------------- | ------------------------------------------ |
-| Change reconnection timing   | `session.ts` calculateReconnectDelay()     |
-| Add connection event         | `session.ts` SessionKeeperEvents interface |
-| Change file size limit       | `sftp.ts` MAX_FILE_SIZE constant           |
-| Fix path expansion for macOS | `sftp.ts` expandRemotePath()               |
-| Change pool behavior         | `pool.ts` - simple Map, add/remove/clear   |
+| Task                         | Location                                               |
+| ---------------------------- | ------------------------------------------------------ |
+| Change reconnection timing   | `session.types.ts` calculateReconnectDelay()           |
+| Add connection event         | `session.types.ts` SessionKeeperEvents interface       |
+| Change file size limit       | `sftp.ts` MAX_FILE_SIZE constant                       |
+| Fix path expansion for macOS | `sftp.ts` expandRemotePath()                           |
+| Change pool behavior         | `pool.ts` - simple Map, add/remove/clear               |
+| Modify auth config building  | `session-connect-config.io.ts` buildSshConnectConfig() |
 
 ## Anti-Patterns
 
@@ -68,4 +71,4 @@ DISCONNECTED → connect() → CONNECTED
 
 **Never block in connect()** - always use async/await with timeouts.
 
-**Never log credentials** - auth info handled only in buildConnectConfig().
+**Never log credentials** - auth info handled only in `session-connect-config.io.ts`.

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Generated: 2026-01-29 | Commit: 32abaf9 | Branch: master -->
+<!-- Generated: 2026-01-29 | Commit: 6e10ed5 | Branch: master -->
 
 ## Overview
 
@@ -16,10 +16,12 @@ src/
 │   ├── loader.ts     # loadConfig(): JSON Schema validation via AJV, 0600 permission check
 │   └── types.ts      # Config, ServerConfig, auth type guards
 ├── ssh/              # See src/ssh/AGENTS.md
-│   ├── session.ts    # SessionKeeper: EventEmitter wrapping ssh2 Client, auto-reconnect
-│   ├── pool.ts       # ConnectionPool: Map<serverId, SessionKeeper>
-│   ├── connection.ts # DEAD CODE - ignore
-│   └── sftp.ts       # FileTransfer: upload/download with 100MB limit
+│   ├── session.ts              # SessionKeeper: EventEmitter wrapping ssh2 Client, auto-reconnect
+│   ├── session.types.ts        # Types, constants, pure functions (calculateReconnectDelay, safeEmitError)
+│   ├── session-connect-config.io.ts  # buildSshConnectConfig() - auth config builder
+│   ├── pool.ts                 # ConnectionPool: Map<serverId, SessionKeeper>
+│   ├── connection.ts           # DEAD CODE - ignore
+│   └── sftp.ts                 # FileTransfer: upload/download with 100MB limit
 └── tools/            # See src/tools/AGENTS.md
     └── *.ts          # 7 MCP tools, each registerXxxTool()
 
@@ -32,16 +34,16 @@ tests/
 
 ## Where to Look
 
-| Task                        | Location                                                            |
-| --------------------------- | ------------------------------------------------------------------- |
-| Add new MCP tool            | `src/tools/` - see subdirectory AGENTS.md                           |
-| Change connection behavior  | `src/ssh/session.ts` SessionKeeper class                            |
-| Modify reconnection logic   | `src/ssh/session.ts` startReconnection(), calculateReconnectDelay() |
-| Change file transfer limits | `src/ssh/sftp.ts` MAX_FILE_SIZE constant                            |
-| Add config validation       | `src/config/loader.ts` CONFIG_SCHEMA object                         |
-| Add new config field        | `src/config/types.ts` + update CONFIG_SCHEMA                        |
-| Debug auth issues           | `src/ssh/session.ts` buildConnectConfig()                           |
-| Add E2E tests               | `tests/e2e/ssh/` - see subdirectory AGENTS.md                       |
+| Task                        | Location                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| Add new MCP tool            | `src/tools/` - see subdirectory AGENTS.md                                              |
+| Change connection behavior  | `src/ssh/session.ts` SessionKeeper class                                               |
+| Modify reconnection logic   | `src/ssh/session.ts` startReconnection(), `session.types.ts` calculateReconnectDelay() |
+| Change file transfer limits | `src/ssh/sftp.ts` MAX_FILE_SIZE constant                                               |
+| Add config validation       | `src/config/loader.ts` CONFIG_SCHEMA object                                            |
+| Add new config field        | `src/config/types.ts` + update CONFIG_SCHEMA                                           |
+| Debug auth issues           | `src/ssh/session-connect-config.io.ts` buildSshConnectConfig()                         |
+| Add E2E tests               | `tests/e2e/ssh/` - see subdirectory AGENTS.md                                          |
 
 ## Code Map
 
