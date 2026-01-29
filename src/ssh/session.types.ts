@@ -1,4 +1,5 @@
-// SessionKeeper types, interfaces, and configuration constants.
+// SessionKeeper types, interfaces, constants, and pure utility functions.
+import type { EventEmitter } from 'node:events';
 
 export const DEFAULT_KEEPALIVE_INTERVAL_MS = 30000;
 export const DEFAULT_KEEPALIVE_COUNT_MAX = 3;
@@ -33,4 +34,19 @@ export interface HealthStatus {
   reconnecting: boolean;
   reconnectAttempt?: number;
   lastActivity: number;
+}
+
+export function calculateReconnectDelay(
+  attempt: number,
+  baseDelayMs: number,
+  maxDelayMs: number,
+): number {
+  const delay = baseDelayMs * Math.pow(2, attempt - 1);
+  return Math.min(delay, maxDelayMs);
+}
+
+export function safeEmitError(emitter: EventEmitter, err: Error): void {
+  if (emitter.listenerCount('error') > 0) {
+    emitter.emit('error', err);
+  }
 }

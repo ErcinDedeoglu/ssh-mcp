@@ -1,4 +1,4 @@
-// FileTransfer download tests: basic download, file not found, size limits, permission errors.
+// FileTransfer download tests: path expansion and special character handling.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 import type { ServerConfig } from '../../../src/config/types.js';
@@ -34,9 +34,9 @@ vi.mock('node:fs', () => ({
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
 
-import { FileTransfer, MAX_FILE_SIZE } from '../../../src/ssh/sftp.js';
+import { FileTransfer } from '../../../src/ssh/sftp.js';
 
-describe('FileTransfer download', () => {
+describe('FileTransfer download path handling', () => {
   let serverConfig: ServerConfig;
 
   beforeEach(() => {
@@ -49,7 +49,7 @@ describe('FileTransfer download', () => {
     vi.restoreAllMocks();
   });
 
-  it('downloads file successfully', async () => {
+  it('expands ~ in remote paths', async () => {
     const { connection, mockClient } = await setupConnectedClient(
       serverConfig,
       mockClientInstances,
@@ -57,11 +57,13 @@ describe('FileTransfer download', () => {
     );
     const fileTransfer = new FileTransfer(connection);
 
+    let capturedRemotePath = '';
     mockClient.sftp.mockImplementation(
       (callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.stat.mockImplementation(
           (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
+            capturedRemotePath = _path;
             setImmediate(() => cb(null, { size: 1024 }));
           },
         );
@@ -74,12 +76,11 @@ describe('FileTransfer download', () => {
       },
     );
 
-    await expect(
-      fileTransfer.download('/remote/file.txt', '/local/file.txt'),
-    ).resolves.toBeUndefined();
+    await fileTransfer.download('~/documents/file.txt', '/local/file.txt');
+    expect(capturedRemotePath).toBe('/home/testuser/documents/file.txt');
   });
 
-  it('throws on remote file not found', async () => {
+  it('handles special characters in paths', async () => {
     const { connection, mockClient } = await setupConnectedClient(
       serverConfig,
       mockClientInstances,
@@ -87,79 +88,26 @@ describe('FileTransfer download', () => {
     );
     const fileTransfer = new FileTransfer(connection);
 
+    let capturedRemotePath = '';
     mockClient.sftp.mockImplementation(
       (callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
         sftpWrapper.stat.mockImplementation(
           (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
-            const err = new Error('No such file') as Error & { code?: string };
-            err.code = 'ENOENT';
-            setImmediate(() => cb(err, null));
-          },
-        );
-        setImmediate(() => callback(null, sftpWrapper));
-      },
-    );
-
-    await expect(fileTransfer.download('/remote/missing.txt', '/local/file.txt')).rejects.toThrow(
-      /not found/i,
-    );
-  });
-
-  it('throws on remote file too large', async () => {
-    const { connection, mockClient } = await setupConnectedClient(
-      serverConfig,
-      mockClientInstances,
-      getMockClient,
-    );
-    const fileTransfer = new FileTransfer(connection);
-
-    mockClient.sftp.mockImplementation(
-      (callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
-        const sftpWrapper = new MockSFTPWrapper();
-        sftpWrapper.stat.mockImplementation(
-          (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
-            setImmediate(() => cb(null, { size: MAX_FILE_SIZE + 1 }));
-          },
-        );
-        setImmediate(() => callback(null, sftpWrapper));
-      },
-    );
-
-    await expect(fileTransfer.download('/remote/large.bin', '/local/large.bin')).rejects.toThrow(
-      /file too large/i,
-    );
-  });
-
-  it('throws on permission denied', async () => {
-    const { connection, mockClient } = await setupConnectedClient(
-      serverConfig,
-      mockClientInstances,
-      getMockClient,
-    );
-    const fileTransfer = new FileTransfer(connection);
-
-    mockClient.sftp.mockImplementation(
-      (callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
-        const sftpWrapper = new MockSFTPWrapper();
-        sftpWrapper.stat.mockImplementation(
-          (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
+            capturedRemotePath = _path;
             setImmediate(() => cb(null, { size: 1024 }));
           },
         );
         sftpWrapper.fastGet.mockImplementation(
           (_remote: string, _local: string, cb: (err: Error | null) => void) => {
-            const err = new Error('Permission denied') as Error & { code?: string };
-            err.code = 'EACCES';
-            setImmediate(() => cb(err));
+            setImmediate(() => cb(null));
           },
         );
         setImmediate(() => callback(null, sftpWrapper));
       },
     );
 
-    await expect(fileTransfer.download('/remote/protected.txt', '/local/file.txt')).rejects.toThrow(
-      /permission denied/i,
-    );
+    await fileTransfer.download('/remote/file with spaces.txt', '/local/file.txt');
+    expect(capturedRemotePath).toBe('/remote/file with spaces.txt');
   });
 });

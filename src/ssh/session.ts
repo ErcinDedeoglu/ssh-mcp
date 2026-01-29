@@ -11,13 +11,14 @@ import {
   DEFAULT_MAX_RECONNECT_DELAY_MS,
   DEFAULT_CONNECTION_TIMEOUT_SECONDS,
   MS_PER_SECOND,
+  calculateReconnectDelay,
+  safeEmitError,
   type SessionKeeperOptions,
   type HealthStatus,
 } from './session.types.js';
 import { buildSshConnectConfig } from './session-connect-config.io.js';
 
-export type { SessionKeeperOptions, HealthStatus };
-export type { SessionKeeperEvents } from './session.types.js';
+export type { SessionKeeperOptions, HealthStatus, SessionKeeperEvents } from './session.types.js';
 
 export class SessionKeeper extends EventEmitter {
   private readonly config: ServerConfig;
@@ -97,7 +98,7 @@ export class SessionKeeper extends EventEmitter {
         if (settled) return;
         settled = true;
         const err = new Error(`Connection timeout after ${timeoutMs}ms`);
-        this.safeEmitError(err);
+        safeEmitError(this, err);
         this.sshClient.destroy();
         reject(err);
       }, timeoutMs);
@@ -116,12 +117,12 @@ export class SessionKeeper extends EventEmitter {
 
       const onError = (err: Error): void => {
         if (settled) {
-          this.safeEmitError(err);
+          safeEmitError(this, err);
           return;
         }
         settled = true;
         clearTimeout(timeoutId);
-        this.safeEmitError(err);
+        safeEmitError(this, err);
         reject(err);
       };
 
@@ -157,17 +158,6 @@ export class SessionKeeper extends EventEmitter {
     });
   }
 
-  private safeEmitError(err: Error): void {
-    if (this.listenerCount('error') > 0) {
-      this.emit('error', err);
-    }
-  }
-
-  private calculateReconnectDelay(attempt: number): number {
-    const delay = this.options.baseReconnectDelayMs * Math.pow(2, attempt - 1);
-    return Math.min(delay, this.options.maxReconnectDelayMs);
-  }
-
   private startReconnection(): void {
     if (this.reconnectAttempt >= this.options.maxReconnectAttempts) {
       this.reconnecting = false;
@@ -176,11 +166,13 @@ export class SessionKeeper extends EventEmitter {
     }
     this.reconnecting = true;
     this.reconnectAttempt++;
-    const delay = this.calculateReconnectDelay(this.reconnectAttempt);
+    const delay = calculateReconnectDelay(
+      this.reconnectAttempt,
+      this.options.baseReconnectDelayMs,
+      this.options.maxReconnectDelayMs,
+    );
     this.emit('reconnecting', this.reconnectAttempt, delay);
-    this.reconnectTimer = setTimeout(() => {
-      this.attemptReconnect();
-    }, delay);
+    this.reconnectTimer = setTimeout(() => this.attemptReconnect(), delay);
   }
 
   private attemptReconnect(): void {
@@ -202,8 +194,6 @@ export class SessionKeeper extends EventEmitter {
       this.setupEventHandlers();
     });
 
-    this.sshClient.once('error', () => {
-      this.startReconnection();
-    });
+    this.sshClient.once('error', () => this.startReconnection());
   }
 }
