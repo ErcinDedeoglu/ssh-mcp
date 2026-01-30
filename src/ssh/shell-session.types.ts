@@ -109,7 +109,11 @@ export function parseMarkedOutput(
   const cleaned = stripControlSequences(beforeMarker);
   const lines = cleaned.split('\n');
   const outputLines = lines.filter((line) => !isEchoedCommandLine(line, marker));
-  const output = outputLines.join('\n').trim();
+  // Strip leading prompt that appears from the previous command
+  let output = outputLines.join('\n').trim();
+  if (output.startsWith(MCP_PROMPT)) {
+    output = output.substring(MCP_PROMPT.length).trim();
+  }
 
   return {
     output,

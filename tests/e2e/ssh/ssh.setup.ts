@@ -96,7 +96,7 @@ export function createTestContext(): TestContext {
     pool: new ConnectionPool(),
     server1Config: config.servers[0],
     server2Config: config.servers[1],
-    serverKeyConfig: config.servers[2],
-    serverKeyPassphraseConfig: config.servers[3],
+    serverKeyConfig: config.servers[3],
+    serverKeyPassphraseConfig: config.servers[4],
   };
 }
