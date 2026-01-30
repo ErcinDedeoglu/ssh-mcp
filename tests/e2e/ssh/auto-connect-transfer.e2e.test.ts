@@ -8,13 +8,12 @@ import {
   ConnectionPool,
   executeCommand,
   type TestContext,
+  loadTestConfigFull,
+  getShardConfigPath,
 } from './ssh.setup.js';
 import { ForwardRegistry } from '../../../src/ssh/forward-registry.js';
 import { RemoteForwardRegistry } from '../../../src/ssh/remote-forward-registry.js';
-import { loadConfig } from '../../../src/config/loader.js';
 import type { Config } from '../../../src/config/types.js';
-
-const TEST_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.test.json');
 
 describe.skipIf(!isDockerRunning())('E2E Auto-Connect - File Transfer', () => {
   let ctx: TestContext;
@@ -26,7 +25,7 @@ describe.skipIf(!isDockerRunning())('E2E Auto-Connect - File Transfer', () => {
 
   beforeAll(() => {
     originalConfigEnv = process.env.SSH_MCP_CONFIG;
-    process.env.SSH_MCP_CONFIG = TEST_CONFIG_PATH;
+    process.env.SSH_MCP_CONFIG = getShardConfigPath();
     ctx = createTestContext();
   });
 
@@ -34,7 +33,7 @@ describe.skipIf(!isDockerRunning())('E2E Auto-Connect - File Transfer', () => {
     pool = new ConnectionPool();
     forwardRegistry = new ForwardRegistry();
     remoteForwardRegistry = new RemoteForwardRegistry();
-    config = loadConfig();
+    config = loadTestConfigFull();
   });
 
   afterAll(() => {

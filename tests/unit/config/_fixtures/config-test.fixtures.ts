@@ -1,4 +1,5 @@
 // Shared test fixtures and helpers for config loader tests.
+import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -8,24 +9,31 @@ export interface ConfigTestContext {
   testDir: string;
   configDir: string;
   configPath: string;
-  originalHome: string | undefined;
+  originalEnvConfig: string | undefined;
 }
 
 export function createTestContext(suffix = ''): ConfigTestContext {
-  const testDir = path.join(os.tmpdir(), `ssh-mcp-test-${suffix}-${process.pid}`);
+  // Use random suffix for true isolation in parallel execution
+  const uniqueId = crypto.randomBytes(8).toString('hex');
+  const testDir = path.join(os.tmpdir(), `ssh-mcp-test-${suffix}-${uniqueId}`);
   const configDir = path.join(testDir, '.ssh-mcp');
   const configPath = path.join(configDir, 'config.json');
-  return { testDir, configDir, configPath, originalHome: undefined };
+  return { testDir, configDir, configPath, originalEnvConfig: undefined };
 }
 
 export function setupTestEnv(ctx: ConfigTestContext): void {
-  ctx.originalHome = process.env.HOME;
-  process.env.HOME = ctx.testDir;
+  // Use SSH_MCP_CONFIG env var instead of modifying HOME (which is global/shared)
+  ctx.originalEnvConfig = process.env.SSH_MCP_CONFIG;
+  process.env.SSH_MCP_CONFIG = ctx.configPath;
   fs.mkdirSync(ctx.configDir, { recursive: true });
 }
 
 export function teardownTestEnv(ctx: ConfigTestContext): void {
-  process.env.HOME = ctx.originalHome;
+  if (ctx.originalEnvConfig !== undefined) {
+    process.env.SSH_MCP_CONFIG = ctx.originalEnvConfig;
+  } else {
+    delete process.env.SSH_MCP_CONFIG;
+  }
   fs.rmSync(ctx.testDir, { recursive: true, force: true });
 }
 

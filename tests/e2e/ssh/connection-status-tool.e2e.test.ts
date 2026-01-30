@@ -1,4 +1,3 @@
-import * as path from 'node:path';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import {
   isDockerRunning,
@@ -6,12 +5,11 @@ import {
   ConnectionPool,
   SessionKeeper,
   type TestContext,
+  loadTestConfigFull,
+  getShardConfigPath,
 } from './ssh.setup.js';
 import { ForwardRegistry } from '../../../src/ssh/forward-registry.js';
-import { loadConfig } from '../../../src/config/loader.js';
 import type { Config } from '../../../src/config/types.js';
-
-const TEST_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.test.json');
 
 describe.skipIf(!isDockerRunning())('E2E connection_status Tool', () => {
   let ctx: TestContext;
@@ -22,14 +20,14 @@ describe.skipIf(!isDockerRunning())('E2E connection_status Tool', () => {
 
   beforeAll(() => {
     originalConfigEnv = process.env.SSH_MCP_CONFIG;
-    process.env.SSH_MCP_CONFIG = TEST_CONFIG_PATH;
+    process.env.SSH_MCP_CONFIG = getShardConfigPath();
     ctx = createTestContext();
   });
 
   beforeEach(() => {
     pool = new ConnectionPool();
     forwardRegistry = new ForwardRegistry();
-    config = loadConfig();
+    config = loadTestConfigFull();
   });
 
   afterAll(() => {

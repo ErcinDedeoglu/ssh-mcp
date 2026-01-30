@@ -2,20 +2,19 @@
  * E2E tests for execute tool stallTimeout parameter.
  * Tests the full agent flow: tool handler -> SSH -> response.
  */
-import * as path from 'node:path';
+
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import {
   isDockerRunning,
   createTestContext,
   ConnectionPool,
   type TestContext,
+  loadTestConfigFull,
+  getShardConfigPath,
 } from './ssh.setup.js';
 import { ForwardRegistry } from '../../../src/ssh/forward-registry.js';
 import { ShellRegistry } from '../../../src/ssh/shell-registry.js';
-import { loadConfig } from '../../../src/config/loader.js';
 import type { Config } from '../../../src/config/types.js';
-
-const TEST_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.test.json');
 
 describe.skipIf(!isDockerRunning())('E2E Execute Tool - Stall Timeout', () => {
   let ctx: TestContext;
@@ -27,7 +26,7 @@ describe.skipIf(!isDockerRunning())('E2E Execute Tool - Stall Timeout', () => {
 
   beforeAll(() => {
     originalConfigEnv = process.env.SSH_MCP_CONFIG;
-    process.env.SSH_MCP_CONFIG = TEST_CONFIG_PATH;
+    process.env.SSH_MCP_CONFIG = getShardConfigPath();
     ctx = createTestContext();
   });
 
@@ -35,7 +34,7 @@ describe.skipIf(!isDockerRunning())('E2E Execute Tool - Stall Timeout', () => {
     pool = new ConnectionPool();
     forwardRegistry = new ForwardRegistry();
     shellRegistry = new ShellRegistry();
-    config = loadConfig();
+    config = loadTestConfigFull();
   });
 
   afterAll(() => {

@@ -1,17 +1,15 @@
-import * as path from 'node:path';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import {
   isDockerRunning,
   createTestContext,
   ConnectionPool,
   type TestContext,
+  loadTestConfigFull,
+  getShardConfigPath,
 } from './ssh.setup.js';
 import { ForwardRegistry } from '../../../src/ssh/forward-registry.js';
 import { RemoteForwardRegistry } from '../../../src/ssh/remote-forward-registry.js';
-import { loadConfig } from '../../../src/config/loader.js';
 import type { Config } from '../../../src/config/types.js';
-
-const TEST_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.test.json');
 
 describe.skipIf(!isDockerRunning())('E2E Auto-Connect - Core', () => {
   let ctx: TestContext;
@@ -23,7 +21,7 @@ describe.skipIf(!isDockerRunning())('E2E Auto-Connect - Core', () => {
 
   beforeAll(() => {
     originalConfigEnv = process.env.SSH_MCP_CONFIG;
-    process.env.SSH_MCP_CONFIG = TEST_CONFIG_PATH;
+    process.env.SSH_MCP_CONFIG = getShardConfigPath();
     ctx = createTestContext();
   });
 
@@ -31,7 +29,7 @@ describe.skipIf(!isDockerRunning())('E2E Auto-Connect - Core', () => {
     pool = new ConnectionPool();
     forwardRegistry = new ForwardRegistry();
     remoteForwardRegistry = new RemoteForwardRegistry();
-    config = loadConfig();
+    config = loadTestConfigFull();
   });
 
   afterAll(() => {

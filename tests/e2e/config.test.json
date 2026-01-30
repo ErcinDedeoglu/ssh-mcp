@@ -23,7 +23,7 @@
     },
     {
       "id": "jump-target-internal",
-      "host": "ssh-mcp-test-2",
+      "host": "ssh-server-2",
       "port": 2222,
       "username": "admin",
       "auth": {

@@ -1,7 +1,11 @@
+# E2E Test Docker Compose
+# Supports parallel shards via PORT_BASE environment variable
+# Usage: PORT_BASE=3 docker compose -p ssh-mcp-e2e-1 up -d
+# Default PORT_BASE=2 gives ports 2222, 2223, 2224
+
 services:
   ssh-server-1:
     image: linuxserver/openssh-server:latest
-    container_name: ssh-mcp-test-1
     hostname: test-server-1
     environment:
       - PUID=1000
@@ -13,7 +17,7 @@ services:
     volumes:
       - ./tests/e2e/config/sshd_config:/etc/ssh/sshd_config:ro
     ports:
-      - '2222:2222'
+      - '${PORT_BASE:-2}222:2222'
     healthcheck:
       test: ['CMD', 'nc', '-z', 'localhost', '2222']
       interval: 5s
@@ -22,7 +26,6 @@ services:
 
   ssh-server-2:
     image: linuxserver/openssh-server:latest
-    container_name: ssh-mcp-test-2
     hostname: test-server-2
     environment:
       - PUID=1000
@@ -34,7 +37,7 @@ services:
     volumes:
       - ./tests/e2e/config/sshd_config:/etc/ssh/sshd_config:ro
     ports:
-      - '2223:2222'
+      - '${PORT_BASE:-2}223:2222'
     healthcheck:
       test: ['CMD', 'nc', '-z', 'localhost', '2222']
       interval: 5s
@@ -43,7 +46,6 @@ services:
 
   ssh-server-key:
     image: linuxserver/openssh-server:latest
-    container_name: ssh-mcp-test-key
     hostname: test-server-key
     environment:
       - PUID=1000
@@ -56,7 +58,7 @@ services:
       - ./tests/e2e/keys:/keys:ro
       - ./tests/e2e/config/sshd_config:/etc/ssh/sshd_config:ro
     ports:
-      - '2224:2222'
+      - '${PORT_BASE:-2}224:2222'
     healthcheck:
       test: ['CMD', 'nc', '-z', 'localhost', '2222']
       interval: 5s

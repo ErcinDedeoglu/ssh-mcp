@@ -339,7 +339,9 @@ npm install
 npm test
 
 # Run E2E tests (requires Docker - handles setup/cleanup automatically)
-npm run test:e2e
+npm run test:e2e              # Parallel with 8 shards (default)
+npm run test:e2e:sequential   # Single shard for debugging
+SHARDS=4 npm run test:e2e     # Custom shard count
 
 # Run all tests
 npm run test:all
@@ -351,6 +353,25 @@ npm run build
 npm run lint
 npm run typecheck
 ```
+
+### Parallel E2E Tests
+
+E2E tests run in parallel by default (8 shards). Each shard gets its own Docker Compose project with unique ports:
+
+| Shard | ssh-server-1 | ssh-server-2 | ssh-server-key |
+| ----- | ------------ | ------------ | -------------- |
+| 0     | 2222         | 2223         | 2224           |
+| 1     | 3222         | 3223         | 3224           |
+| ...   | ...          | ...          | ...            |
+
+| Shards | Docker | Health | Tests | Cleanup | Total |
+| ------ | ------ | ------ | ----- | ------- | ----- |
+| 1      | 0s     | 0s     | 103s  | 4s      | 107s  |
+| 4      | 2s     | 1s     | 38s   | 5s      | 46s   |
+| 8      | 5s     | 2s     | 27s   | 8s      | 42s   |
+| 16     | 16s    | 2s     | 27s   | 12s     | 57s   |
+
+Customize shard count: `SHARDS=4 npm run test:e2e` or `SHARDS=1 npm run test:e2e` for debugging.
 
 ## License
 

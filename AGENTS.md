@@ -112,12 +112,14 @@ tests/
 ## Commands
 
 ```bash
-npm test              # Unit tests (fast, mocked)
-npm run test:e2e      # E2E tests (Docker required, auto-manages container)
-npm run test:all      # Both
-npm run build         # TypeScript → dist/
-npm run lint          # ESLint + Prettier + typecheck
-npm run typecheck     # tsc --noEmit
+npm test                    # Unit tests (fast, mocked)
+npm run test:e2e            # E2E tests - parallel 4 shards (default)
+npm run test:e2e:sequential # E2E tests - single shard for debugging
+SHARDS=8 npm run test:e2e   # E2E tests - custom shard count
+npm run test:all            # Unit + E2E
+npm run build               # TypeScript → dist/
+npm run lint                # ESLint + Prettier + typecheck
+npm run typecheck           # tsc --noEmit
 ```
 
 ## Testing Notes

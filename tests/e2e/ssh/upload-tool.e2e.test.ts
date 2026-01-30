@@ -7,12 +7,11 @@ import {
   createTestContext,
   ConnectionPool,
   type TestContext,
+  loadTestConfigFull,
+  getShardConfigPath,
 } from './ssh.setup.js';
 import { ForwardRegistry } from '../../../src/ssh/forward-registry.js';
-import { loadConfig } from '../../../src/config/loader.js';
 import type { Config } from '../../../src/config/types.js';
-
-const TEST_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.test.json');
 
 describe.skipIf(!isDockerRunning())('E2E upload Tool', () => {
   let ctx: TestContext;
@@ -24,7 +23,7 @@ describe.skipIf(!isDockerRunning())('E2E upload Tool', () => {
 
   beforeAll(() => {
     originalConfigEnv = process.env.SSH_MCP_CONFIG;
-    process.env.SSH_MCP_CONFIG = TEST_CONFIG_PATH;
+    process.env.SSH_MCP_CONFIG = getShardConfigPath();
     ctx = createTestContext();
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssh-mcp-upload-test-'));
   });
@@ -32,7 +31,7 @@ describe.skipIf(!isDockerRunning())('E2E upload Tool', () => {
   beforeEach(() => {
     pool = new ConnectionPool();
     forwardRegistry = new ForwardRegistry();
-    config = loadConfig();
+    config = loadTestConfigFull();
   });
 
   afterAll(() => {

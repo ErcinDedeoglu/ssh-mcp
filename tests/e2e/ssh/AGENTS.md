@@ -10,6 +10,8 @@ E2E test suite for SSH functionality. Requires Docker. ~40 test files + setup mo
 
 | File                               | Purpose                                                                              |
 | ---------------------------------- | ------------------------------------------------------------------------------------ |
+| `../global-setup.ts`               | Vitest globalSetup: Docker lifecycle per shard, port injection                       |
+| `../vitest.d.ts`                   | TypeScript types for Vitest provide/inject (ProvidedContext)                         |
 | `ssh.setup.ts`                     | Shared utilities: loadTestConfig, isDockerRunning, executeCommand, createTestContext |
 | `port-forward.setup.ts`            | Port forwarding test setup and TCP helpers                                           |
 | `remote-forward.setup.ts`          | Remote forwarding test setup and local TCP server                                    |
@@ -54,21 +56,51 @@ describe.skipIf(!isDockerRunning())('E2E Tests', () => {
 
 ## Available Test Servers
 
-| Config                          | Port | Auth             | User     |
-| ------------------------------- | ---- | ---------------- | -------- |
-| `ctx.server1Config`             | 2222 | password         | testuser |
-| `ctx.server2Config`             | 2223 | password         | admin    |
-| `ctx.serverKeyConfig`           | 2224 | private key      | keyuser  |
-| `ctx.serverKeyPassphraseConfig` | 2224 | key + passphrase | keyuser  |
+Ports are dynamic based on shard index (shown for shard 0):
+
+| Config                          | Port (shard 0) | Auth             | User     |
+| ------------------------------- | -------------- | ---------------- | -------- |
+| `ctx.server1Config`             | 2222           | password         | testuser |
+| `ctx.server2Config`             | 2223           | password         | admin    |
+| `ctx.serverKeyConfig`           | 2224           | private key      | keyuser  |
+| `ctx.serverKeyPassphraseConfig` | 2224           | key + passphrase | keyuser  |
+
+Ports are calculated via `getShardPorts()` in `ssh.setup.ts`.
 
 ## Running Tests
 
 ```bash
-npm run test:e2e          # Auto-manages Docker (recommended)
-npm run test:e2e:up       # Start Docker containers only
-npm run test:e2e:run      # Run tests (assumes Docker running)
-npm run test:e2e:down     # Stop Docker containers
+npm run test:e2e              # Parallel with 4 shards (default)
+npm run test:e2e:sequential   # Single shard for debugging
+SHARDS=8 npm run test:e2e     # Custom shard count
+npm run test:e2e:up           # Start Docker containers only
+npm run test:e2e:run          # Run tests (assumes Docker running)
+npm run test:e2e:down         # Stop Docker containers
 ```
+
+### Parallel Execution Architecture
+
+Parallel E2E tests use isolated Docker environments per shard:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              run-e2e-parallel.sh                         │
+├─────────────────────────────────────────────────────────┤
+│ 1. Start N Docker envs (ssh-mcp-e2e-0, ssh-mcp-e2e-1)   │
+│ 2. Wait for all containers healthy                      │
+│ 3. Run N vitest processes in parallel                   │
+│ 4. Cleanup all Docker envs                              │
+└─────────────────────────────────────────────────────────┘
+```
+
+Port allocation per shard:
+
+| Shard | ssh-server-1 | ssh-server-2 | ssh-server-key |
+| ----- | ------------ | ------------ | -------------- |
+| 0     | 2222         | 2223         | 2224           |
+| 1     | 3222         | 3223         | 3224           |
+
+Formula: `(2 + shardIndex) * 1000 + offset` where offset is 222, 223, or 224.
 
 ## Adding New Tests
 
@@ -89,4 +121,4 @@ npm run test:e2e:down     # Stop Docker containers
 
 **Check isDockerRunning**: All E2E tests skip automatically if Docker unavailable.
 
-**Sequential execution**: `fileParallelism: false` in vitest.config.ts - tests don't run in parallel.
+**Parallel sharding**: Tests can run in parallel across multiple shards via `npm run test:e2e:parallel`. Within a shard, tests run sequentially (`fileParallelism: false`).

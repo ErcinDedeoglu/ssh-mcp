@@ -1,4 +1,3 @@
-import * as path from 'node:path';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import {
   isDockerRunning,
@@ -6,11 +5,11 @@ import {
   ConnectionPool,
   SessionKeeper,
   type TestContext,
+  loadTestConfigFull,
+  getShardConfigPath,
+  getShardPorts,
 } from './ssh.setup.js';
-import { loadConfig } from '../../../src/config/loader.js';
 import type { Config } from '../../../src/config/types.js';
-
-const TEST_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.test.json');
 
 describe.skipIf(!isDockerRunning())('E2E list_servers Tool', () => {
   let ctx: TestContext;
@@ -20,13 +19,13 @@ describe.skipIf(!isDockerRunning())('E2E list_servers Tool', () => {
 
   beforeAll(() => {
     originalConfigEnv = process.env.SSH_MCP_CONFIG;
-    process.env.SSH_MCP_CONFIG = TEST_CONFIG_PATH;
+    process.env.SSH_MCP_CONFIG = getShardConfigPath();
     ctx = createTestContext();
   });
 
   beforeEach(() => {
     pool = new ConnectionPool();
-    config = loadConfig();
+    config = loadTestConfigFull();
   });
 
   afterAll(() => {
@@ -56,7 +55,7 @@ describe.skipIf(!isDockerRunning())('E2E list_servers Tool', () => {
     expect(server1).toBeDefined();
     expect(server1.connected).toBe(false);
     expect(server1.host).toBe('localhost');
-    expect(server1.port).toBe(2222);
+    expect(server1.port).toBe(getShardPorts().server1);
   });
 
   it('shows connected=true for servers in pool', async () => {

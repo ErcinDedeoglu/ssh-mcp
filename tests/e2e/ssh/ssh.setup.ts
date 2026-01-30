@@ -1,7 +1,3 @@
-/**
- * Shared test utilities for SSH E2E tests.
- * Provides types, helpers, and test context factory.
- */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
@@ -16,6 +12,10 @@ export type { ServerConfig };
 export { MAX_FILE_SIZE } from '../../../src/ssh/sftp.js';
 export type { PasswordAuth, PrivateKeyAuth } from '../../../src/config/types.js';
 
+import type { Config } from '../../../src/config/types.js';
+
+export type { Config };
+
 export interface TestConfig {
   servers: ServerConfig[];
 }
@@ -28,14 +28,62 @@ export interface ExecuteResult {
 
 const TEST_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.test.json');
 
+export function getShardPorts(): { server1: number; server2: number; serverKey: number } {
+  const shardIndex = parseInt(process.env.TEST_SHARD_INDEX ?? '0', 10);
+  const portBase = 2 + shardIndex;
+  return {
+    server1: portBase * 1000 + 222,
+    server2: portBase * 1000 + 223,
+    serverKey: portBase * 1000 + 224,
+  };
+}
+
 export function loadTestConfig(): TestConfig {
   const content = fs.readFileSync(TEST_CONFIG_PATH, 'utf-8');
-  return JSON.parse(content) as TestConfig;
+  const config = JSON.parse(content) as TestConfig;
+
+  const ports = getShardPorts();
+  config.servers[0].port = ports.server1;
+  config.servers[1].port = ports.server2;
+  config.servers[3].port = ports.serverKey;
+  config.servers[4].port = ports.serverKey;
+
+  return config;
+}
+
+export function loadTestConfigFull(): Config {
+  const content = fs.readFileSync(TEST_CONFIG_PATH, 'utf-8');
+  const config = JSON.parse(content) as Config;
+
+  const ports = getShardPorts();
+  config.servers[0].port = ports.server1;
+  config.servers[1].port = ports.server2;
+  config.servers[3].port = ports.serverKey;
+  config.servers[4].port = ports.serverKey;
+
+  return config;
+}
+
+let shardConfigPath: string | null = null;
+
+export function getShardConfigPath(): string {
+  if (shardConfigPath) return shardConfigPath;
+
+  const config = loadTestConfigFull();
+  const tempDir = fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'ssh-mcp-test-'));
+  shardConfigPath = path.join(tempDir, 'config.json');
+  fs.writeFileSync(shardConfigPath, JSON.stringify(config, null, 2));
+  fs.chmodSync(shardConfigPath, 0o600);
+
+  return shardConfigPath;
 }
 
 export function isDockerRunning(): boolean {
   try {
-    const result = execSync('docker compose -f docker-compose.test.yml ps --format json', {
+    const shardIndex = parseInt(process.env.TEST_SHARD_INDEX ?? '0', 10);
+    const projectName = `ssh-mcp-e2e-${shardIndex}`;
+    const cmd = `docker compose -f docker-compose.test.yml -p ${projectName} ps --format json`;
+    const result = execSync(cmd, {
       cwd: path.join(import.meta.dirname, '../../..'),
       encoding: 'utf-8',
     });

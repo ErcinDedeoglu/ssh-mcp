@@ -14,7 +14,7 @@ describe.skipIf(!isDockerRunning())('E2E Jump Host Connection Tests', () => {
 
   const jumpTargetConfig: ServerConfig = {
     id: 'jump-target',
-    host: 'ssh-mcp-test-2',
+    host: 'ssh-server-2',
     port: 2222,
     username: 'admin',
     auth: { password: 'admin456' },
@@ -35,7 +35,7 @@ describe.skipIf(!isDockerRunning())('E2E Jump Host Connection Tests', () => {
       await jumpSession.connect();
       expect(jumpSession.isConnected).toBe(true);
 
-      const stream = await createJumpStream(jumpSession, 'ssh-mcp-test-2', 2222);
+      const stream = await createJumpStream(jumpSession, 'ssh-server-2', 2222);
       expect(stream).toBeDefined();
 
       stream.end();

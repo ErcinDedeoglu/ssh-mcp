@@ -1,18 +1,16 @@
-import * as path from 'node:path';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import {
   isDockerRunning,
   createTestContext,
   ConnectionPool,
   type TestContext,
+  loadTestConfigFull,
+  getShardConfigPath,
 } from './ssh.setup.js';
 import { ForwardRegistry } from '../../../src/ssh/forward-registry.js';
 import { ShellRegistry } from '../../../src/ssh/shell-registry.js';
 import { JobRegistry } from '../../../src/ssh/job-registry.js';
-import { loadConfig } from '../../../src/config/loader.js';
 import type { Config } from '../../../src/config/types.js';
-
-const TEST_CONFIG_PATH = path.join(import.meta.dirname, '..', 'config.test.json');
 
 describe.skipIf(!isDockerRunning())('E2E cancel_job Tool', () => {
   let ctx: TestContext;
@@ -25,7 +23,7 @@ describe.skipIf(!isDockerRunning())('E2E cancel_job Tool', () => {
 
   beforeAll(() => {
     originalConfigEnv = process.env.SSH_MCP_CONFIG;
-    process.env.SSH_MCP_CONFIG = TEST_CONFIG_PATH;
+    process.env.SSH_MCP_CONFIG = getShardConfigPath();
     ctx = createTestContext();
   });
 
@@ -34,7 +32,7 @@ describe.skipIf(!isDockerRunning())('E2E cancel_job Tool', () => {
     forwardRegistry = new ForwardRegistry();
     shellRegistry = new ShellRegistry();
     jobRegistry = new JobRegistry();
-    config = loadConfig();
+    config = loadTestConfigFull();
   });
 
   afterAll(() => {
