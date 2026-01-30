@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
+import { ping } from '../ssh/session-ping.io.js';
 import { ensureConnected, formatConnectionError } from './ensure-connected.js';
 import { sanitizeError } from './utils.js';
 
@@ -45,13 +46,14 @@ export function registerConnectionStatusTool(
         const { session } = connectionResult;
 
         const health = session.healthCheck();
+        const isAlive = health.connected ? await ping(session.client) : false;
         const now = Date.now();
         const lastActivityAgo =
           health.lastActivity > 0 ? formatDuration(now - health.lastActivity) : 'never';
 
         const status: ConnectionHealthStatus = {
           serverId,
-          connected: health.connected,
+          connected: isAlive,
           idle: health.idle,
           reconnecting: health.reconnecting,
           lastActivityMs: health.lastActivity,

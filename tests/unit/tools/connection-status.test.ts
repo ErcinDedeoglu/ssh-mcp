@@ -16,7 +16,13 @@ const { MockClient } = vi.hoisted(() => {
     connect = vi.fn();
     end = vi.fn();
     destroy = vi.fn();
-    exec = vi.fn();
+    exec = vi.fn(
+      (_cmd: string, cb: (err: Error | null, stream: InstanceType<typeof EE>) => void) => {
+        const stream = new EE();
+        cb(null, stream);
+        setImmediate(() => stream.emit('close'));
+      },
+    );
     sftp = vi.fn();
     constructor() {
       super();
