@@ -65,6 +65,35 @@
 - [x] **Document timeout hierarchy in `execute`** - Added: "Timeout priority: timeout param > server config > global defaults > 60s"
 - [x] **Add `touch()` to read-only tools or document behavior** - Documented in descriptions: "read-only check and does NOT reset the idle timer"
 
+## Long-Running Command Support
+
+Commands like `apt upgrade`, `npm install`, or compilation jobs fail due to architectural limitations.
+
+### High Priority
+
+- [ ] **Configurable stall timeout** - `DEFAULT_STALL_TIMEOUT_MS = 10000` is hardcoded; commands with >10s silent periods fail even with high `timeout` param. Add `stallTimeout` parameter to execute tool.
+- [ ] **Disable stall timeout option** - Allow `stallTimeout: 0` for known-slow commands (package managers, builds)
+
+### Medium Priority
+
+- [ ] **Background execution mode** - New `execute_background` tool returning job ID, with `check_job` for polling status/output. Enables "fire and check later" pattern.
+- [ ] **Command cancellation** - Send SIGINT/SIGTERM to remote process on timeout/cancel. Currently timeout only rejects client-side promise; command keeps running on server.
+
+### Low Priority
+
+- [ ] **Streaming output** - Use MCP progress notifications to stream output chunks during execution. Lets agent see progress and detect hangs.
+- [ ] **Progress indicators** - Report percentage completion for commands that support it
+
+### Workaround (Document)
+
+Until fixed, agents should use:
+
+```bash
+# Background with manual polling
+nohup <command> > /tmp/out.log 2>&1 & echo $!
+# Check: kill -0 <PID> 2>/dev/null && echo running || cat /tmp/out.log
+```
+
 ## Security Debt (SECURITY.md claims but not implemented)
 
 - [ ] **SSH host key verification** - Prevent MITM attacks (doc says "MUST implement")
