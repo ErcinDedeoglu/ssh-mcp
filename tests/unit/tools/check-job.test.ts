@@ -102,6 +102,41 @@ describe('check_job tool', () => {
     expect(parsed.partialOutput).toBe('partial output');
   });
 
+  it('includes progress indicators for running job', async () => {
+    const mockServer = createMockServer();
+    registerCheckJobTool(mockServer as unknown as McpServer, jobRegistry);
+
+    const job = jobRegistry.create('server1', 'echo hello');
+    jobRegistry.updateStatus(job.id, 'running');
+    jobRegistry.appendOutput(job.id, 'some output data');
+
+    const handler = mockServer.getToolHandler('check_job')!;
+    const result = await handler({ jobId: job.id });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.elapsedMs).toBeGreaterThanOrEqual(0);
+    expect(parsed.bytesReceived).toBe(16);
+    expect(parsed.lastOutputAt).toBeDefined();
+    expect(parsed.msSinceLastOutput).toBeGreaterThanOrEqual(0);
+  });
+
+  it('includes elapsedMs even without output', async () => {
+    const mockServer = createMockServer();
+    registerCheckJobTool(mockServer as unknown as McpServer, jobRegistry);
+
+    const job = jobRegistry.create('server1', 'echo hello');
+    jobRegistry.updateStatus(job.id, 'running');
+
+    const handler = mockServer.getToolHandler('check_job')!;
+    const result = await handler({ jobId: job.id });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.elapsedMs).toBeGreaterThanOrEqual(0);
+    expect(parsed.bytesReceived).toBe(0);
+    expect(parsed.lastOutputAt).toBeUndefined();
+    expect(parsed.msSinceLastOutput).toBeUndefined();
+  });
+
   it('returns cancelled job status with error', async () => {
     const mockServer = createMockServer();
     registerCheckJobTool(mockServer as unknown as McpServer, jobRegistry);

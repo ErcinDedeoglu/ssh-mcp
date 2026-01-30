@@ -24,7 +24,10 @@ export function registerExecuteBackgroundTool(
   (server.tool as any)(
     'execute_background',
     'Execute a shell command in the background, returning a job ID immediately. ' +
-      'Use check_job to poll for status/output. Ideal for long-running commands.',
+      'Use check_job to poll for status and streaming output. Ideal for long-running commands (>5min) ' +
+      'like builds, package installs, or large file operations. ' +
+      'Output is streamed in real-time - check_job returns partial output as the command runs. ' +
+      'For commands <5min, prefer execute with stallTimeout=0.',
     {
       serverId: z.string().describe('Unique identifier of the server to execute command on'),
       command: z.string().describe('Shell command to execute on the remote server'),
@@ -138,8 +141,9 @@ function executeJobAsync(
   jobRegistry: JobRegistry,
   session: { touch: () => void },
 ): void {
+  const onOutput = (chunk: string) => jobRegistry.appendOutput(jobId, chunk);
   shell
-    .execute(command, options)
+    .execute(command, { ...options, onOutput })
     .then((result) => {
       jobRegistry.setResult(jobId, result);
       session.touch();

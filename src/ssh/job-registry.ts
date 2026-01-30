@@ -12,6 +12,8 @@ export interface Job {
   result?: ShellExecuteResult;
   error?: string;
   output: string;
+  bytesReceived: number;
+  lastOutputAt?: number;
 }
 
 export class JobRegistry {
@@ -27,6 +29,7 @@ export class JobRegistry {
       status: 'pending',
       startedAt: Date.now(),
       output: '',
+      bytesReceived: 0,
     };
     this.jobs.set(id, job);
     return job;
@@ -68,6 +71,8 @@ export class JobRegistry {
     const job = this.jobs.get(jobId);
     if (job) {
       job.output += chunk;
+      job.bytesReceived += chunk.length;
+      job.lastOutputAt = Date.now();
     }
   }
 

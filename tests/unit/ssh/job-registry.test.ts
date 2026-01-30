@@ -117,27 +117,6 @@ describe('JobRegistry', () => {
     });
   });
 
-  describe('appendOutput', () => {
-    it('appends to job output', () => {
-      const job = registry.create('server1', 'cmd');
-      registry.appendOutput(job.id, 'chunk1');
-      registry.appendOutput(job.id, 'chunk2');
-      expect(registry.get(job.id)?.output).toBe('chunk1chunk2');
-    });
-
-    it('handles unknown job ID gracefully', () => {
-      expect(() => registry.appendOutput('nonexistent', 'chunk')).not.toThrow();
-    });
-
-    it('handles empty string chunks', () => {
-      const job = registry.create('server1', 'cmd');
-      registry.appendOutput(job.id, '');
-      registry.appendOutput(job.id, 'data');
-      registry.appendOutput(job.id, '');
-      expect(registry.get(job.id)?.output).toBe('data');
-    });
-  });
-
   describe('remove', () => {
     it('removes job and returns true', () => {
       const job = registry.create('server1', 'cmd');

@@ -27,7 +27,11 @@ export function registerExecuteTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'execute',
-    'Execute a shell command on a connected SSH server. State (cwd, env vars) persists across calls. Timeout priority: timeout param > server config > global defaults > 60s.',
+    'Execute a shell command on a connected SSH server. State (cwd, env vars) persists across calls. ' +
+      'IMPORTANT: For long-running commands (apt, npm install, builds) that may not produce output for extended periods, ' +
+      'pass stallTimeout=0 to disable stall detection. Default stall timeout is 10s. ' +
+      'For very long commands (>5min), use execute_background instead. ' +
+      'Timeout priority: timeout param > server config > global defaults > 60s.',
     {
       serverId: z.string().describe('Unique identifier of the server to execute command on'),
       command: z.string().describe('Shell command to execute on the remote server'),

@@ -27,8 +27,9 @@ export interface PendingCommand {
   command: string;
   marker: string;
   timeoutMs: number;
-  stallTimeoutMs: number | null; // null = use session default, 0 = disabled
-  stdin?: string; // Content to write to command's stdin
+  stallTimeoutMs: number | null;
+  stdin?: string;
+  onOutput?: (chunk: string) => void;
   resolve: (result: ShellExecuteResult) => void;
   reject: (error: Error) => void;
 }
@@ -37,6 +38,7 @@ export interface ExecuteOptions {
   timeoutMs?: number;
   stallTimeoutMs?: number | null; // undefined = use session default, null/0 = disabled
   stdin?: string; // Content to write to command's stdin (sent after command, followed by EOF)
+  onOutput?: (chunk: string) => void; // Callback for streaming output during execution
 }
 
 export interface ShellSessionOptions {

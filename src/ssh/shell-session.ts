@@ -61,6 +61,7 @@ export class ShellSession {
         stallTimeoutMs:
           opts.stallTimeoutMs === undefined ? this.options.stallTimeoutMs : opts.stallTimeoutMs,
         stdin: opts.stdin,
+        onOutput: opts.onOutput,
         resolve,
         reject,
       };
@@ -96,33 +97,30 @@ export class ShellSession {
     this.buffer += data;
     this.resetStallTimer();
     if (!this.currentCommand) return;
+    try {
+      this.currentCommand.onOutput?.(data);
+    } catch {
+      /* callback errors ignored to avoid breaking execution */
+    }
     const parsed = parseMarkedOutput(this.buffer, this.currentCommand.marker);
     if (parsed) {
       this.completeCurrentCommand(parsed.output, parsed.exitCode);
       this.buffer = parsed.remaining;
     }
   }
-
   private handleClose(): void {
     this.ready = false;
     this.stream = null;
     this.rejectPendingCommands(new Error('Shell session closed unexpectedly'));
   }
-
   private handleError(err: Error, sendInterrupt = true): void {
-    if (sendInterrupt) {
-      this.sendInterrupt();
-    }
+    if (sendInterrupt) this.stream?.write('\x03');
     if (this.currentCommand) {
       this.currentCommand.reject(err);
       this.currentCommand = null;
     }
     this.clearTimers();
     this.processNextCommand();
-  }
-
-  private sendInterrupt(): void {
-    this.stream?.write('\x03');
   }
   cancelCurrentCommand(): boolean {
     if (!this.currentCommand) return false;
@@ -162,19 +160,21 @@ export class ShellSession {
   }
   private startTimeoutTimer(): void {
     if (!this.currentCommand) return;
-    this.timeoutTimer = setTimeout(() => {
-      this.handleError(new Error(`Command timed out after ${this.currentCommand?.timeoutMs}ms`));
-    }, this.currentCommand.timeoutMs);
+    const ms = this.currentCommand.timeoutMs;
+    this.timeoutTimer = setTimeout(
+      () => this.handleError(new Error(`Command timed out after ${ms}ms`)),
+      ms,
+    );
   }
-
   private startStallTimer(): void {
     if (!this.currentCommand) return;
     const stallMs = this.currentCommand.stallTimeoutMs;
     if (stallMs === null || stallMs === 0) return;
-    const msg = `Command stalled - no output for ${stallMs}ms`;
-    this.stallTimer = setTimeout(() => this.handleError(new Error(msg)), stallMs);
+    this.stallTimer = setTimeout(
+      () => this.handleError(new Error(`Command stalled - no output for ${stallMs}ms`)),
+      stallMs,
+    );
   }
-
   private resetStallTimer(): void {
     if (!this.stallTimer) return;
     clearTimeout(this.stallTimer);
