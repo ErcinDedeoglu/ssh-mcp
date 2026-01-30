@@ -4,7 +4,7 @@
 
 ## Overview
 
-E2E test suite for SSH functionality. Requires Docker. 34 test files + setup modules.
+E2E test suite for SSH functionality. Requires Docker. ~40 test files + setup modules.
 
 ## Structure
 
@@ -88,3 +88,5 @@ npm run test:e2e:down     # Stop Docker containers
 **Use executeCommand helper**: Handles stream collection and exit code.
 
 **Check isDockerRunning**: All E2E tests skip automatically if Docker unavailable.
+
+**Sequential execution**: `fileParallelism: false` in vitest.config.ts - tests don't run in parallel.

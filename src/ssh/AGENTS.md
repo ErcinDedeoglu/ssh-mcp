@@ -8,23 +8,23 @@ SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool 
 
 ## Structure
 
-| File                           | Purpose                                                           | Lines |
-| ------------------------------ | ----------------------------------------------------------------- | ----- |
-| `session.ts`                   | SessionKeeper: EventEmitter-based connection with auto-reconnect  | 199   |
-| `session.types.ts`             | Types, constants, pure functions (calculateReconnectDelay, etc.)  | 58    |
-| `session-connect-config.io.ts` | buildSshConnectConfig(): auth config builder for ssh2             | 50    |
-| `pool.ts`                      | ConnectionPool: Map registry with auto-removal on max-retries     | 43    |
-| `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, recursive mkdir   | 189   |
-| `forward-registry.ts`          | ForwardRegistry: tracks active port forwards, cleanup on close    | 97    |
-| `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring       | 105   |
-| `remote-forward.ts`            | createRemoteForward(): ssh2 forwardIn() wiring                    | 118   |
-| `remote-forward-registry.ts`   | RemoteForwardRegistry: tracks remote port forwards                | 101   |
-| `shell-session.ts`             | ShellSession: persistent shell with marker-based command exec     | 199   |
-| `shell-session.types.ts`       | Types, constants, marker generation, output parsing functions     | 130   |
-| `shell-session.io.ts`          | Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt) | 38    |
-| `shell-registry.ts`            | ShellRegistry: Map of serverId → ShellSession                     | 36    |
-| `jump-stream.ts`               | createJumpStream(): nested SSH connections through bastion        | 61    |
-| `connection.ts`                | **DEAD CODE** - never use, kept for reference only                | 136   |
+| File                           | Purpose                                                           |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `session.ts`                   | SessionKeeper: EventEmitter-based connection with auto-reconnect  |
+| `session.types.ts`             | Types, constants, pure functions (calculateReconnectDelay, etc.)  |
+| `session-connect-config.io.ts` | buildSshConnectConfig(): auth config builder for ssh2             |
+| `pool.ts`                      | ConnectionPool: Map registry with auto-removal on max-retries     |
+| `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, recursive mkdir   |
+| `forward-registry.ts`          | ForwardRegistry: tracks active local port forwards                |
+| `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring       |
+| `remote-forward.ts`            | createRemoteForward(): ssh2 forwardIn() wiring                    |
+| `remote-forward-registry.ts`   | RemoteForwardRegistry: tracks remote port forwards                |
+| `shell-session.ts`             | ShellSession: persistent shell with marker-based command exec     |
+| `shell-session.types.ts`       | Types, constants, marker generation, output parsing functions     |
+| `shell-session.io.ts`          | Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt) |
+| `shell-registry.ts`            | ShellRegistry: Map of serverId → ShellSession                     |
+| `jump-stream.ts`               | createJumpStream(): nested SSH connections through bastion        |
+| `connection.ts`                | **DEAD CODE** - never use, kept for reference only                |
 
 ## SessionKeeper State Machine
 

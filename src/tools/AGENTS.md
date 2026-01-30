@@ -22,6 +22,8 @@
 | `close_remote_forward` | close-remote-forward.ts | serverId, remotePort, remoteHost?                        | No           |
 | `list_forwards`        | list-forwards.ts        | serverId?                                                | No           |
 
+Note: `ensure-connected.ts` is a **helper**, not a registered tool.
+
 ## Adding a New Tool
 
 1. Create `src/tools/your-tool.ts`:

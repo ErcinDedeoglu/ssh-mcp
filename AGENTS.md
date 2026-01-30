@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Generated: 2026-01-30 | Commit: 02e7e4e | Branch: master -->
+<!-- Generated: 2026-01-30 | Commit: 3f385fa | Branch: master -->
 
 ## Overview
 
@@ -32,7 +32,7 @@ src/
 │   ├── sftp.ts                 # FileTransfer: upload/download with 100MB limit
 │   └── connection.ts           # DEAD CODE - ignore
 └── tools/            # See src/tools/AGENTS.md
-    └── *.ts          # 14 MCP tools, each registerXxxTool()
+    └── *.ts          # 13 MCP tools, each registerXxxTool()
 
 tests/
 ├── unit/             # Vitest mocks, no network
@@ -88,6 +88,8 @@ tests/
 - Config: AJV JSON Schema (`src/config/loader.ts`)
 - Tool inputs: Zod schemas (each tool file)
 
+**200-Line Limit**: Custom ESLint rule enforces max 200 lines per file.
+
 **Timeouts** (all in seconds):
 
 - Connection: 10s default
@@ -103,7 +105,7 @@ tests/
 **Hardcoded Limits**:
 
 - File transfer: 100MB (`src/ssh/sftp.ts` MAX_FILE_SIZE)
-- Command output: 10MB (`src/tools/execute.ts` MAX_OUTPUT_SIZE)
+- Command output: 10MB (`src/ssh/shell-session.types.ts` MAX_OUTPUT_SIZE)
 
 **Home Directory Expansion**: `expandHomePath()` in sftp.ts assumes Linux paths (`/home/${username}`). Does not work on macOS or Windows servers.
 
@@ -114,7 +116,7 @@ npm test              # Unit tests (fast, mocked)
 npm run test:e2e      # E2E tests (Docker required, auto-manages container)
 npm run test:all      # Both
 npm run build         # TypeScript → dist/
-npm run lint          # ESLint
+npm run lint          # ESLint + Prettier + typecheck
 npm run typecheck     # tsc --noEmit
 ```
 
@@ -124,6 +126,7 @@ npm run typecheck     # tsc --noEmit
 - Docker containers: 3 SSH servers (password auth, key auth, key+passphrase)
 - Test scripts auto-manage Docker lifecycle
 - Mock pattern: `vi.hoisted()` for early mock setup, instance tracking arrays
+- Unit tests use Vitest globals - no imports needed for `describe`, `it`, `expect`
 
 ---
 
