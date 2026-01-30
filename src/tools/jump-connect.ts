@@ -30,7 +30,7 @@ export function registerJumpConnectTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'jump_connect',
-    'Connect to a server through a jump host (bastion). Auto-connects to jump host if needed. Auto-reloads config.',
+    'Connect to a server through a jump host (bastion). Auto-connects to jump host if needed. Auto-reloads config. NOTE: Jump connections do NOT auto-reconnect - if the connection drops, you must call jump_connect again.',
     {
       jumpServerId: z.string().describe('Server ID of the jump host (bastion)'),
       targetServerId: z.string().describe('Server ID of the target server to connect to'),

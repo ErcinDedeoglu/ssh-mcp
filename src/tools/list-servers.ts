@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
 import { loadConfig } from '../config/loader.js';
 import type { ConnectionPool } from '../ssh/pool.js';
+import { sanitizeError } from './utils.js';
 
 export interface ServerInfo {
   id: string;
@@ -30,24 +31,36 @@ export function registerListServersTool(
     'list_servers',
     'List all configured SSH servers with their connection status (auto-reloads config)',
     async () => {
-      refreshConfig(config);
-      const servers: ServerInfo[] = config.servers.map((serverConfig) => ({
-        id: serverConfig.id,
-        host: serverConfig.host,
-        port: serverConfig.port,
-        username: serverConfig.username,
-        description: serverConfig.description,
-        connected: pool.has(serverConfig.id),
-      }));
+      try {
+        refreshConfig(config);
+        const servers: ServerInfo[] = config.servers.map((serverConfig) => ({
+          id: serverConfig.id,
+          host: serverConfig.host,
+          port: serverConfig.port,
+          username: serverConfig.username,
+          description: serverConfig.description,
+          connected: pool.has(serverConfig.id),
+        }));
 
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(servers, null, 2),
-          },
-        ],
-      };
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(servers, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text' as const,
+              text: sanitizeError(error),
+            },
+          ],
+        };
+      }
     },
   );
 }

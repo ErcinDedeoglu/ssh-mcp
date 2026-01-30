@@ -17,6 +17,7 @@
 - [ ] SSH agent forwarding - Git operations from remote using local keys
 - [x] Persistent shell sessions - Maintain cwd/env across commands (uses `client.shell()` with marker-based output parsing)
 - [x] Console history (`get_console_history`) - Retrieve previous command outputs (100 entries max, 50KB per output)
+- [x] Auto-connect - Tools automatically connect when needed, no manual `connect` required
 
 ## Test Gaps (Port Forwarding)
 
@@ -36,25 +37,33 @@
 - [x] **Server shutdown cleanup verification** - Test in `tests/integration/server.test.ts` verifies `shutdown()` closes all forward servers and sockets.
 - [x] **Rapid forward create/delete cycles** - Test in `port-forward-connections.e2e.test.ts` runs 10 create/delete cycles.
 
+## Test Gaps (Auto-Connect & Core)
+
+- [x] **ensure-connected.ts unit tests** - 15 tests across 3 files: session-states, auto, handlers
+- [x] **Auto-connect E2E tests** - 10 tests across 3 files: core, tools, transfer
+- [x] **get-console-history.ts unit tests** - 6 tests for shell registry interaction
+- [x] **session.types.ts pure functions** - 21 tests for constants and calculateReconnectDelay/safeEmitError
+- [x] **shell-registry.ts** - 16 tests for registry CRUD and destroy behavior
+
 ## Agent UX Gaps (Tool descriptions missing critical info)
 
 ### High Priority
 
-- [ ] **Add workflow guidance to `execute` description** - Agent doesn't know `connect` must be called first
-- [ ] **Document jump host no-reconnect in `jump_connect`** - `maxReconnectAttempts: 0` not mentioned, agent keeps trying dead connection
+- [x] **Add workflow guidance to `execute` description** - RESOLVED: Auto-connect implemented, tools connect automatically when needed
+- [x] **Document jump host no-reconnect in `jump_connect`** - Added note: "Jump connections do NOT auto-reconnect"
 
 ### Medium Priority
 
-- [ ] **Add 100MB limit to upload/download descriptions** - Agent only discovers limit after transfer fails
-- [ ] **Wrap `list_servers` in try-catch** - Only tool without error handling, config errors crash instead of returning error
-- [ ] **Add idle warning to `connection_status` response** - Connection idle after 15min but no auto-disconnect or warning
-- [ ] **Add history count warning to `disconnect` response** - Shell history (100 entries) destroyed without warning
+- [x] **Add 100MB limit to upload/download descriptions** - Already present: `Maximum file size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
+- [x] **Wrap `list_servers` in try-catch** - Added try-catch with sanitizeError()
+- [x] **Add idle warning to `connection_status` response** - Added `idleWarning` field when connection is idle
+- [x] **Add history count warning to `disconnect` response** - Added warning in description + `shellHistoryCleared` field in response
 
 ### Low Priority
 
-- [ ] **Create MCP resource with workflow guide** - Document: list_servers → connect → execute → disconnect
-- [ ] **Document timeout hierarchy in `execute`** - param > server config > global defaults not explained
-- [ ] **Add `touch()` to read-only tools or document behavior** - connection_status/get_console_history don't reset idle timer
+- [x] **Create MCP resource with workflow guide** - RESOLVED: Simplified to list_servers → execute → disconnect (auto-connect handles connection)
+- [x] **Document timeout hierarchy in `execute`** - Added: "Timeout priority: timeout param > server config > global defaults > 60s"
+- [x] **Add `touch()` to read-only tools or document behavior** - Documented in descriptions: "read-only check and does NOT reset the idle timer"
 
 ## Security Debt (SECURITY.md claims but not implemented)
 

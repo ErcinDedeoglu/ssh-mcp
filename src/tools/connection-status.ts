@@ -10,6 +10,7 @@ export interface ConnectionHealthStatus {
   serverId: string;
   connected: boolean;
   idle: boolean;
+  idleWarning?: string;
   reconnecting: boolean;
   reconnectAttempt?: number;
   lastActivityMs: number;
@@ -32,7 +33,7 @@ export function registerConnectionStatusTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'connection_status',
-    'Check the health and status of an SSH connection. Auto-connects if not already connected.',
+    'Check the health and status of an SSH connection. Auto-connects if not already connected. NOTE: This is a read-only check and does NOT reset the idle timer.',
     { serverId: z.string().describe('Unique identifier of the server to check connection health') },
     async ({ serverId }: { serverId: string }) => {
       try {
@@ -56,6 +57,11 @@ export function registerConnectionStatusTool(
           lastActivityMs: health.lastActivity,
           lastActivityAgo,
         };
+
+        if (health.idle) {
+          status.idleWarning =
+            'Connection has been idle for >15 minutes. Run a command to reset the idle timer.';
+        }
 
         if (health.reconnectAttempt !== undefined) {
           status.reconnectAttempt = health.reconnectAttempt;

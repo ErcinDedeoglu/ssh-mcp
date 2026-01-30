@@ -12,7 +12,7 @@ export function registerDisconnectTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'disconnect',
-    'Close an SSH connection to a server',
+    'Close an SSH connection to a server. WARNING: Shell history (up to 100 commands) will be permanently deleted.',
     { serverId: z.string().describe('Unique identifier of the server to disconnect from') },
     async ({ serverId }: { serverId: string }) => {
       try {
@@ -28,6 +28,7 @@ export function registerDisconnectTool(
           };
         }
 
+        const hadShell = shellRegistry.has(serverId);
         shellRegistry.remove(serverId);
         pool.remove(serverId);
 
@@ -39,6 +40,7 @@ export function registerDisconnectTool(
                 status: 'disconnected',
                 serverId,
                 message: `Disconnected from ${serverId}`,
+                shellHistoryCleared: hadShell,
               }),
             },
           ],

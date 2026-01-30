@@ -27,7 +27,7 @@ export function registerExecuteTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'execute',
-    'Execute a shell command on a connected SSH server. State (cwd, env vars) persists across calls.',
+    'Execute a shell command on a connected SSH server. State (cwd, env vars) persists across calls. Timeout priority: timeout param > server config > global defaults > 60s.',
     {
       serverId: z.string().describe('Unique identifier of the server to execute command on'),
       command: z.string().describe('Shell command to execute on the remote server'),

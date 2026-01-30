@@ -10,7 +10,7 @@ export function registerGetConsoleHistoryTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'get_console_history',
-    'Get command execution history for a server shell session. Returns recent commands with their outputs, exit codes, and timestamps.',
+    'Get command execution history for a server shell session. Returns recent commands with their outputs, exit codes, and timestamps. NOTE: This is a read-only query and does NOT reset the idle timer.',
     {
       serverId: z.string().describe('Unique identifier of the server'),
       limit: z
