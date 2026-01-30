@@ -4,21 +4,28 @@
 
 ## Overview
 
-E2E test suite for SSH functionality. 63 tests across 8 test files + 1 shared setup module. Requires Docker.
+E2E test suite for SSH functionality. Requires Docker. 34 test files + setup modules.
 
 ## Structure
 
-| File                               | Tests | Purpose                                                                              |
-| ---------------------------------- | ----- | ------------------------------------------------------------------------------------ |
-| `ssh.setup.ts`                     | -     | Shared utilities: loadTestConfig, isDockerRunning, executeCommand, createTestContext |
-| `connection.e2e.test.ts`           | 9     | Connection establishment, key-based auth, pool management                            |
-| `command-execution.e2e.test.ts`    | 10    | Command exec, concurrent commands, timeouts                                          |
-| `file-transfer.e2e.test.ts`        | 8     | SFTP upload/download, size limits                                                    |
-| `file-transfer-binary.e2e.test.ts` | 5     | Binary files, unicode filenames, special content                                     |
-| `unicode-output.e2e.test.ts`       | 6     | Unicode in output, large output handling                                             |
-| `session-lifecycle.e2e.test.ts`    | 8     | Keep-alive, idle timeout, auto-reconnection                                          |
-| `concurrency-stress.e2e.test.ts`   | 8     | High concurrency, stress tests                                                       |
-| `edge-cases.e2e.test.ts`           | 9     | Permission errors, long commands, edge cases                                         |
+| File                               | Purpose                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| `ssh.setup.ts`                     | Shared utilities: loadTestConfig, isDockerRunning, executeCommand, createTestContext |
+| `port-forward.setup.ts`            | Port forwarding test setup and TCP helpers                                           |
+| `remote-forward.setup.ts`          | Remote forwarding test setup and local TCP server                                    |
+| `connection.e2e.test.ts`           | Connection establishment, key-based auth, pool management                            |
+| `command-execution.e2e.test.ts`    | Command exec, concurrent commands, timeouts                                          |
+| `file-transfer.e2e.test.ts`        | SFTP upload/download, size limits                                                    |
+| `file-transfer-binary.e2e.test.ts` | Binary files, unicode filenames, special content                                     |
+| `unicode-output.e2e.test.ts`       | Unicode in output, large output handling                                             |
+| `session-lifecycle.e2e.test.ts`    | Keep-alive, idle timeout, auto-reconnection                                          |
+| `concurrency-stress.e2e.test.ts`   | High concurrency, stress tests                                                       |
+| `edge-cases.e2e.test.ts`           | Permission errors, long commands, edge cases                                         |
+| `port-forward*.e2e.test.ts`        | Local port forwarding tests                                                          |
+| `remote-forward*.e2e.test.ts`      | Remote port forwarding tests                                                         |
+| `jump-connect*.e2e.test.ts`        | Jump host / bastion connection tests                                                 |
+| `shell-session*.e2e.test.ts`       | Persistent shell session tests                                                       |
+| `console-history*.e2e.test.ts`     | Command history retrieval tests                                                      |
 
 ## Test Context Pattern
 

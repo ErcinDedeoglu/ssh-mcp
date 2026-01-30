@@ -17,10 +17,13 @@ SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool 
 | `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, recursive mkdir   | 189   |
 | `forward-registry.ts`          | ForwardRegistry: tracks active port forwards, cleanup on close    | 97    |
 | `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring       | 105   |
+| `remote-forward.ts`            | createRemoteForward(): ssh2 forwardIn() wiring                    | 118   |
+| `remote-forward-registry.ts`   | RemoteForwardRegistry: tracks remote port forwards                | 101   |
 | `shell-session.ts`             | ShellSession: persistent shell with marker-based command exec     | 199   |
-| `shell-session.types.ts`       | Types, constants, marker generation, output parsing functions     | 100   |
+| `shell-session.types.ts`       | Types, constants, marker generation, output parsing functions     | 130   |
 | `shell-session.io.ts`          | Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt) | 38    |
 | `shell-registry.ts`            | ShellRegistry: Map of serverId → ShellSession                     | 36    |
+| `jump-stream.ts`               | createJumpStream(): nested SSH connections through bastion        | 61    |
 | `connection.ts`                | **DEAD CODE** - never use, kept for reference only                | 136   |
 
 ## SessionKeeper State Machine
@@ -65,20 +68,23 @@ DISCONNECTED → connect() → CONNECTED
 
 ## Where to Look
 
-| Task                         | Location                                               |
-| ---------------------------- | ------------------------------------------------------ |
-| Change reconnection timing   | `session.types.ts` calculateReconnectDelay()           |
-| Add connection event         | `session.types.ts` SessionKeeperEvents interface       |
-| Change file size limit       | `sftp.ts` MAX_FILE_SIZE constant                       |
-| Fix path expansion for macOS | `sftp.ts` expandRemotePath()                           |
-| Change pool behavior         | `pool.ts` - simple Map, add/remove/clear               |
-| Modify auth config building  | `session-connect-config.io.ts` buildSshConnectConfig() |
-| Change port forward behavior | `local-forward.ts` createLocalForward()                |
-| Modify forward tracking      | `forward-registry.ts` ForwardRegistry class            |
-| Change shell timeout         | `shell-session.types.ts` DEFAULT_SHELL_TIMEOUT_MS      |
-| Change output size limit     | `shell-session.types.ts` MAX_OUTPUT_SIZE               |
-| Modify shell output parsing  | `shell-session.types.ts` parseMarkedOutput()           |
-| Change shell initialization  | `shell-session.io.ts` waitForInitialPrompt()           |
+| Task                          | Location                                               |
+| ----------------------------- | ------------------------------------------------------ |
+| Change reconnection timing    | `session.types.ts` calculateReconnectDelay()           |
+| Add connection event          | `session.types.ts` SessionKeeperEvents interface       |
+| Change file size limit        | `sftp.ts` MAX_FILE_SIZE constant                       |
+| Fix path expansion for macOS  | `sftp.ts` expandRemotePath()                           |
+| Change pool behavior          | `pool.ts` - simple Map, add/remove/clear               |
+| Modify auth config building   | `session-connect-config.io.ts` buildSshConnectConfig() |
+| Change local port forward     | `local-forward.ts` createLocalForward()                |
+| Change remote port forward    | `remote-forward.ts` createRemoteForward()              |
+| Modify local forward tracking | `forward-registry.ts` ForwardRegistry class            |
+| Modify remote forward track   | `remote-forward-registry.ts` RemoteForwardRegistry     |
+| Change shell timeout          | `shell-session.types.ts` DEFAULT_SHELL_TIMEOUT_MS      |
+| Change output size limit      | `shell-session.types.ts` MAX_OUTPUT_SIZE               |
+| Modify shell output parsing   | `shell-session.types.ts` parseMarkedOutput()           |
+| Change shell initialization   | `shell-session.io.ts` waitForInitialPrompt()           |
+| Modify jump host behavior     | `jump-stream.ts` createJumpStream()                    |
 
 ## Anti-Patterns
 

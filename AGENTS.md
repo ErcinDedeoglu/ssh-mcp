@@ -1,10 +1,10 @@
 # AGENTS.md
 
-<!-- Generated: 2026-01-29 | Commit: 6e10ed5 | Branch: master -->
+<!-- Generated: 2026-01-30 | Commit: 02e7e4e | Branch: master -->
 
 ## Overview
 
-MCP server exposing 10 SSH tools (connect, execute, upload/download, port forwarding, etc.) via stdio transport. Uses ssh2 library with connection pooling and auto-reconnection.
+MCP server exposing 14 SSH tools (connect, execute, upload/download, port forwarding, jump hosts, etc.) via stdio transport. Uses ssh2 library with connection pooling and auto-reconnection.
 
 ## Structure
 
@@ -22,16 +22,23 @@ src/
 │   ├── pool.ts                 # ConnectionPool: Map<serverId, SessionKeeper>
 │   ├── forward-registry.ts     # ForwardRegistry: tracks active port forwards
 │   ├── local-forward.ts        # createLocalForward(): net.Server + ssh2 forwardOut()
-│   ├── connection.ts           # DEAD CODE - ignore
-│   └── sftp.ts                 # FileTransfer: upload/download with 100MB limit
+│   ├── remote-forward.ts       # createRemoteForward(): ssh2 forwardIn() wiring
+│   ├── remote-forward-registry.ts  # RemoteForwardRegistry: tracks remote port forwards
+│   ├── shell-session.ts        # ShellSession: persistent shell with marker-based command exec
+│   ├── shell-session.types.ts  # Types, constants, marker generation, output parsing
+│   ├── shell-session.io.ts     # Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt)
+│   ├── shell-registry.ts       # ShellRegistry: Map of serverId → ShellSession
+│   ├── jump-stream.ts          # createJumpStream(): nested SSH through bastion
+│   ├── sftp.ts                 # FileTransfer: upload/download with 100MB limit
+│   └── connection.ts           # DEAD CODE - ignore
 └── tools/            # See src/tools/AGENTS.md
-    └── *.ts          # 10 MCP tools, each registerXxxTool()
+    └── *.ts          # 14 MCP tools, each registerXxxTool()
 
 tests/
-├── unit/             # Vitest mocks, no network (140 tests)
+├── unit/             # Vitest mocks, no network
 ├── integration/      # SSHMCPServer with mocked transport
 └── e2e/              # See tests/e2e/ssh/AGENTS.md
-    └── ssh/          # Docker SSH containers, real connections (63 tests)
+    └── ssh/          # Docker SSH containers, real connections
 ```
 
 ## Where to Look
@@ -46,6 +53,9 @@ tests/
 | Add new config field         | `src/config/types.ts` + update CONFIG_SCHEMA                                           |
 | Debug auth issues            | `src/ssh/session-connect-config.io.ts` buildSshConnectConfig()                         |
 | Change port forward behavior | `src/ssh/local-forward.ts` createLocalForward()                                        |
+| Change remote port forward   | `src/ssh/remote-forward.ts` createRemoteForward()                                      |
+| Change shell command exec    | `src/ssh/shell-session.ts` ShellSession class                                          |
+| Jump host connections        | `src/ssh/jump-stream.ts` createJumpStream()                                            |
 | Add E2E tests                | `tests/e2e/ssh/` - see subdirectory AGENTS.md                                          |
 
 ## Code Map
@@ -113,7 +123,6 @@ npm run typecheck     # tsc --noEmit
 - E2E tests in `tests/e2e/ssh/` - modular structure with shared setup
 - Docker containers: 3 SSH servers (password auth, key auth, key+passphrase)
 - Test scripts auto-manage Docker lifecycle
-- 203 total tests: 140 unit + 63 E2E
 - Mock pattern: `vi.hoisted()` for early mock setup, instance tracking arrays
 
 ---

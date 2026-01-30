@@ -4,20 +4,24 @@
 
 ## Overview
 
-10 MCP tools. Each file exports `registerXxxTool()`, called from `index.ts`.
+14 MCP tools. Each file exports `registerXxxTool()`, called from `index.ts`.
 
-| Tool                | File                 | Parameters                                               |
-| ------------------- | -------------------- | -------------------------------------------------------- |
-| `list_servers`      | list-servers.ts      | none                                                     |
-| `connect`           | connect.ts           | serverId                                                 |
-| `disconnect`        | disconnect.ts        | serverId                                                 |
-| `execute`           | execute.ts           | serverId, command, timeout?                              |
-| `upload`            | upload.ts            | serverId, localPath, remotePath                          |
-| `download`          | download.ts          | serverId, remotePath, localPath                          |
-| `connection_status` | connection-status.ts | serverId                                                 |
-| `forward_port`      | forward-port.ts      | serverId, remoteHost, remotePort, localHost?, localPort? |
-| `close_forward`     | close-forward.ts     | localPort, localHost?                                    |
-| `list_forwards`     | list-forwards.ts     | serverId?                                                |
+| Tool                   | File                    | Parameters                                               |
+| ---------------------- | ----------------------- | -------------------------------------------------------- |
+| `list_servers`         | list-servers.ts         | none                                                     |
+| `connect`              | connect.ts              | serverId                                                 |
+| `disconnect`           | disconnect.ts           | serverId                                                 |
+| `execute`              | execute.ts              | serverId, command, timeout?                              |
+| `get_console_history`  | get-console-history.ts  | serverId, limit?                                         |
+| `upload`               | upload.ts               | serverId, localPath, remotePath                          |
+| `download`             | download.ts             | serverId, remotePath, localPath                          |
+| `connection_status`    | connection-status.ts    | serverId                                                 |
+| `jump_connect`         | jump-connect.ts         | jumpServerId, targetServerId                             |
+| `forward_port`         | forward-port.ts         | serverId, remoteHost, remotePort, localHost?, localPort? |
+| `forward_remote_port`  | forward-remote-port.ts  | serverId, localHost, localPort, remoteHost?, remotePort? |
+| `close_forward`        | close-forward.ts        | localPort, localHost?                                    |
+| `close_remote_forward` | close-remote-forward.ts | serverId, remotePort, remoteHost?                        |
+| `list_forwards`        | list-forwards.ts        | serverId?                                                |
 
 ## Adding a New Tool
 
