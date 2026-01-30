@@ -180,7 +180,7 @@ Restart the MCP client after configuration.
 **The core tool.** Runs any shell command on the remote server using a persistent shell session. Automatically connects if not already connected.
 
 ```
-Parameters: serverId, command, timeout (optional), stallTimeout (optional)
+Parameters: serverId, command, stdin (optional), timeout (optional), stallTimeout (optional)
 Returns: stdout, stderr, exitCode
 ```
 
@@ -196,6 +196,19 @@ execute("./run-tests.sh")       # sees DEBUG=1
 ```
 
 Shell sessions are automatically destroyed on disconnect.
+
+**Stdin support:** Provide content to write to the command's stdin. Use this instead of heredocs for commands that read from stdin:
+
+```
+# Create a config file (replaces heredoc syntax)
+execute(serverId, "cat > /etc/app.conf", { stdin: "key1=value1\nkey2=value2" })
+
+# Execute a bash script
+execute(serverId, "bash -s", { stdin: "#!/bin/bash\necho 'Hello from script'" })
+
+# Process data with grep/awk/etc
+execute(serverId, "grep -c ERROR", { stdin: logFileContent })
+```
 
 **Stall timeout:** By default, commands that produce no output for 10 seconds are considered stalled and terminated. For long-running commands (builds, package installs), pass `stallTimeout: 0` to disable stall detection:
 

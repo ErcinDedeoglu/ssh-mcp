@@ -31,6 +31,13 @@ export function registerExecuteTool(
     {
       serverId: z.string().describe('Unique identifier of the server to execute command on'),
       command: z.string().describe('Shell command to execute on the remote server'),
+      stdin: z
+        .string()
+        .optional()
+        .describe(
+          'Content to write to the command stdin. Use for commands that read from stdin ' +
+            'like "cat > file", "bash -s", or piped commands. Content is sent followed by EOF.',
+        ),
       timeout: z
         .number()
         .optional()
@@ -47,11 +54,13 @@ export function registerExecuteTool(
     async ({
       serverId,
       command,
+      stdin,
       timeout,
       stallTimeout,
     }: {
       serverId: string;
       command: string;
+      stdin?: string;
       timeout?: number;
       stallTimeout?: number | null;
     }) => {
@@ -67,7 +76,7 @@ export function registerExecuteTool(
         const timeoutMs = resolveTimeoutMs(timeout, serverConfig, config);
         const stallTimeoutMs = resolveStallTimeoutMs(stallTimeout);
 
-        const result = await shell.execute(command, { timeoutMs, stallTimeoutMs });
+        const result = await shell.execute(command, { timeoutMs, stallTimeoutMs, stdin });
         session.touch();
 
         return {

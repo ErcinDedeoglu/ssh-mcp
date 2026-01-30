@@ -28,6 +28,7 @@ export interface PendingCommand {
   marker: string;
   timeoutMs: number;
   stallTimeoutMs: number | null; // null = use session default, 0 = disabled
+  stdin?: string; // Content to write to command's stdin
   resolve: (result: ShellExecuteResult) => void;
   reject: (error: Error) => void;
 }
@@ -35,6 +36,7 @@ export interface PendingCommand {
 export interface ExecuteOptions {
   timeoutMs?: number;
   stallTimeoutMs?: number | null; // undefined = use session default, null/0 = disabled
+  stdin?: string; // Content to write to command's stdin (sent after command, followed by EOF)
 }
 
 export interface ShellSessionOptions {
@@ -68,6 +70,7 @@ export function buildShellInitCommands(): string {
     'export TERM=dumb',
     'export DEBIAN_FRONTEND=noninteractive',
     'unset HISTFILE',
+    'stty -echo 2>/dev/null || true',
   ].join('; ');
 }
 

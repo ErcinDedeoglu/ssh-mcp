@@ -60,6 +60,7 @@ export class ShellSession {
         timeoutMs: opts.timeoutMs ?? this.options.timeoutMs,
         stallTimeoutMs:
           opts.stallTimeoutMs === undefined ? this.options.stallTimeoutMs : opts.stallTimeoutMs,
+        stdin: opts.stdin,
         resolve,
         reject,
       };
@@ -121,16 +122,13 @@ export class ShellSession {
   }
 
   private sendInterrupt(): void {
-    if (!this.stream) return;
-    this.stream.write('\x03');
+    this.stream?.write('\x03');
   }
-
   cancelCurrentCommand(): boolean {
     if (!this.currentCommand) return false;
     this.handleError(new Error('Command cancelled'), true);
     return true;
   }
-
   get hasRunningCommand(): boolean {
     return this.currentCommand !== null;
   }
@@ -144,6 +142,11 @@ export class ShellSession {
     this.startStallTimer();
     const wrapped = wrapCommand(this.currentCommand.command, this.currentCommand.marker);
     this.stream.write(wrapped);
+    if (this.currentCommand.stdin !== undefined) {
+      const stdinContent = this.currentCommand.stdin;
+      this.stream.write(stdinContent.endsWith('\n') ? stdinContent : stdinContent + '\n');
+      this.stream.write('\x04');
+    }
   }
 
   private completeCurrentCommand(output: string, exitCode: number): void {
@@ -154,11 +157,9 @@ export class ShellSession {
     this.currentCommand = null;
     this.processNextCommand();
   }
-
   getHistory(limit?: number): HistoryEntry[] {
     return this.historyTracker.get(limit);
   }
-
   private startTimeoutTimer(): void {
     if (!this.currentCommand) return;
     this.timeoutTimer = setTimeout(() => {
@@ -180,7 +181,6 @@ export class ShellSession {
     this.stallTimer = null;
     this.startStallTimer();
   }
-
   private clearTimers(): void {
     if (this.timeoutTimer) clearTimeout(this.timeoutTimer);
     if (this.stallTimer) clearTimeout(this.stallTimer);
