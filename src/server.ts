@@ -5,6 +5,7 @@ import { ConnectionPool } from './ssh/pool.js';
 import { ForwardRegistry } from './ssh/forward-registry.js';
 import { RemoteForwardRegistry } from './ssh/remote-forward-registry.js';
 import { ShellRegistry } from './ssh/shell-registry.js';
+import { JobRegistry } from './ssh/job-registry.js';
 import { registerAllTools } from './tools/index.js';
 
 const SERVER_NAME = 'ssh-mcp';
@@ -16,6 +17,7 @@ export class SSHMCPServer {
   private readonly forwardRegistry: ForwardRegistry;
   private readonly remoteForwardRegistry: RemoteForwardRegistry;
   private readonly shellRegistry: ShellRegistry;
+  private readonly jobRegistry: JobRegistry;
   private readonly config: Config;
   private transport: StdioServerTransport | null = null;
 
@@ -25,6 +27,7 @@ export class SSHMCPServer {
     this.forwardRegistry = new ForwardRegistry();
     this.remoteForwardRegistry = new RemoteForwardRegistry();
     this.shellRegistry = new ShellRegistry();
+    this.jobRegistry = new JobRegistry();
     this.server = new McpServer(
       {
         name: SERVER_NAME,
@@ -44,6 +47,7 @@ export class SSHMCPServer {
       this.forwardRegistry,
       this.remoteForwardRegistry,
       this.shellRegistry,
+      this.jobRegistry,
     );
   }
 
@@ -53,6 +57,7 @@ export class SSHMCPServer {
   }
 
   async shutdown(): Promise<void> {
+    this.jobRegistry.clear();
     this.shellRegistry.clear();
     this.remoteForwardRegistry.clear();
     this.forwardRegistry.clear();
@@ -70,5 +75,9 @@ export class SSHMCPServer {
 
   getRemoteForwardRegistry(): RemoteForwardRegistry {
     return this.remoteForwardRegistry;
+  }
+
+  getJobRegistry(): JobRegistry {
+    return this.jobRegistry;
   }
 }

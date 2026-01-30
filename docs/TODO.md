@@ -71,13 +71,13 @@ Commands like `apt upgrade`, `npm install`, or compilation jobs fail due to arch
 
 ### High Priority
 
-- [ ] **Configurable stall timeout** - `DEFAULT_STALL_TIMEOUT_MS = 10000` is hardcoded; commands with >10s silent periods fail even with high `timeout` param. Add `stallTimeout` parameter to execute tool.
-- [ ] **Disable stall timeout option** - Allow `stallTimeout: 0` for known-slow commands (package managers, builds)
+- [x] **Configurable stall timeout** - Added `stallTimeout` parameter to `execute` tool. Pass milliseconds to override default, `0` or `null` to disable.
+- [x] **Disable stall timeout option** - `stallTimeout: 0` or `null` disables stall detection for known-slow commands.
 
 ### Medium Priority
 
-- [ ] **Background execution mode** - New `execute_background` tool returning job ID, with `check_job` for polling status/output. Enables "fire and check later" pattern.
-- [ ] **Command cancellation** - Send SIGINT/SIGTERM to remote process on timeout/cancel. Currently timeout only rejects client-side promise; command keeps running on server.
+- [x] **Background execution mode** - New `execute_background` tool returns job ID. Use `check_job` to poll status/output, `cancel_job` to cancel.
+- [x] **Command cancellation** - Added `cancel_job` tool that sends SIGINT (Ctrl+C) to remote process. Also used internally on timeout.
 
 ### Low Priority
 

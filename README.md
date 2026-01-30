@@ -8,6 +8,7 @@ MCP server for SSH connection management and command execution. Define your serv
 - Persistent SSH connections with keep-alive and auto-reconnection
 - Persistent shell sessions - working directory and environment variables persist across commands
 - Execute commands on remote servers
+- **Background execution**: Run long commands asynchronously with job tracking
 - Upload and download files via SFTP
 - Multi-server support with connection pooling
 - Secure credential storage with 0600 permission validation
@@ -160,6 +161,9 @@ Restart the MCP client after configuration.
 | `list_servers`         | List configured servers (auto-reloads config)           |
 | `disconnect`           | Close SSH connection                                    |
 | `execute`              | **Run any shell command** (auto-connects)               |
+| `execute_background`   | Run command in background, returns job ID               |
+| `check_job`            | Check background job status and output                  |
+| `cancel_job`           | Cancel a running background job (sends SIGINT)          |
 | `get_console_history`  | Retrieve previous command outputs                       |
 | `upload`               | SFTP upload (binary-safe, up to 100MB, auto-connects)   |
 | `download`             | SFTP download (binary-safe, up to 100MB, auto-connects) |
@@ -176,7 +180,7 @@ Restart the MCP client after configuration.
 **The core tool.** Runs any shell command on the remote server using a persistent shell session. Automatically connects if not already connected.
 
 ```
-Parameters: serverId, command, timeout (optional)
+Parameters: serverId, command, timeout (optional), stallTimeout (optional)
 Returns: stdout, stderr, exitCode
 ```
 
@@ -192,6 +196,34 @@ execute("./run-tests.sh")       # sees DEBUG=1
 ```
 
 Shell sessions are automatically destroyed on disconnect.
+
+**Stall timeout:** By default, commands that produce no output for 10 seconds are considered stalled and terminated. For long-running commands (builds, package installs), pass `stallTimeout: 0` to disable stall detection:
+
+```
+execute(serverId, "apt upgrade -y", { stallTimeout: 0 })
+execute(serverId, "npm install", { stallTimeout: 0 })
+```
+
+### execute_background / check_job / cancel_job
+
+For very long-running commands, use background execution to avoid blocking:
+
+```
+# Start command in background
+execute_background(serverId, "npm run build")
+→ { jobId: "job_abc123", status: "running" }
+
+# Poll for completion
+check_job(jobId)
+→ { status: "running", output: "Building..." }
+→ { status: "completed", result: { stdout, exitCode } }
+
+# Cancel if needed
+cancel_job(jobId)
+→ { status: "cancelled", interruptSent: true }
+```
+
+Background jobs run independently. Use `check_job` to poll status and retrieve output when done.
 
 ### get_console_history
 
@@ -250,6 +282,21 @@ Run `chmod 600 <config-path>` to restrict access. This check is skipped on Windo
 ### "Command timeout"
 
 Increase the timeout in config or pass `timeout` parameter to execute.
+
+### "Command stalled"
+
+Commands that produce no output for 10 seconds are terminated with a stall error. For slow commands (builds, package managers), disable stall detection:
+
+```
+execute(serverId, "npm install", { stallTimeout: 0 })
+```
+
+Or use background execution for very long commands:
+
+```
+execute_background(serverId, "npm run build")
+check_job(jobId)  # Poll for completion
+```
 
 ### Connection drops frequently
 

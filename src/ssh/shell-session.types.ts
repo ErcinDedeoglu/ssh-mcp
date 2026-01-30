@@ -27,13 +27,19 @@ export interface PendingCommand {
   command: string;
   marker: string;
   timeoutMs: number;
+  stallTimeoutMs: number | null; // null = use session default, 0 = disabled
   resolve: (result: ShellExecuteResult) => void;
   reject: (error: Error) => void;
 }
 
+export interface ExecuteOptions {
+  timeoutMs?: number;
+  stallTimeoutMs?: number | null; // undefined = use session default, null/0 = disabled
+}
+
 export interface ShellSessionOptions {
   timeoutMs?: number;
-  stallTimeoutMs?: number;
+  stallTimeoutMs?: number | null; // null = disabled
 }
 
 export type ResolvedShellOptions = Required<ShellSessionOptions>;

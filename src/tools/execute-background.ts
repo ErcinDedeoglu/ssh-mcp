@@ -5,29 +5,26 @@ import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { ShellRegistry } from '../ssh/shell-registry.js';
 import { ShellSession } from '../ssh/shell-session.js';
+import { JobRegistry } from '../ssh/job-registry.js';
 import { ensureConnected, formatConnectionError } from './ensure-connected.js';
 import { sanitizeError } from './utils.js';
 
 const DEFAULT_COMMAND_TIMEOUT_SECONDS = 60;
 const MS_PER_SECOND = 1000;
 
-export interface ExecuteResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-}
-
-export function registerExecuteTool(
+export function registerExecuteBackgroundTool(
   server: McpServer,
   config: Config,
   pool: ConnectionPool,
   forwardRegistry: ForwardRegistry,
   shellRegistry: ShellRegistry,
+  jobRegistry: JobRegistry,
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
-    'execute',
-    'Execute a shell command on a connected SSH server. State (cwd, env vars) persists across calls. Timeout priority: timeout param > server config > global defaults > 60s.',
+    'execute_background',
+    'Execute a shell command in the background, returning a job ID immediately. ' +
+      'Use check_job to poll for status/output. Ideal for long-running commands.',
     {
       serverId: z.string().describe('Unique identifier of the server to execute command on'),
       command: z.string().describe('Shell command to execute on the remote server'),
@@ -39,10 +36,7 @@ export function registerExecuteTool(
         .number()
         .nullable()
         .optional()
-        .describe(
-          'Stall timeout in seconds - max time without output before failing. ' +
-            'Default: 10s. Set to 0 or null to disable for long-running commands.',
-        ),
+        .describe('Stall timeout in seconds. Set to 0 or null to disable.'),
     },
     async ({
       serverId,
@@ -62,19 +56,34 @@ export function registerExecuteTool(
         }
 
         const { session, serverConfig } = connectionResult;
-
         const shell = await getOrCreateShell(serverId, session.client, shellRegistry);
+
+        const job = jobRegistry.create(serverId, command);
+        jobRegistry.updateStatus(job.id, 'running');
+
         const timeoutMs = resolveTimeoutMs(timeout, serverConfig, config);
         const stallTimeoutMs = resolveStallTimeoutMs(stallTimeout);
 
-        const result = await shell.execute(command, { timeoutMs, stallTimeoutMs });
-        session.touch();
+        executeJobAsync(
+          shell,
+          job.id,
+          command,
+          { timeoutMs, stallTimeoutMs },
+          jobRegistry,
+          session,
+        );
 
         return {
           content: [
             {
               type: 'text' as const,
-              text: JSON.stringify({ serverId, command, ...result }),
+              text: JSON.stringify({
+                jobId: job.id,
+                serverId,
+                command,
+                status: 'running',
+                message: 'Job started. Use check_job to poll for status.',
+              }),
             },
           ],
         };
@@ -119,4 +128,23 @@ function resolveStallTimeoutMs(stallTimeout: number | null | undefined): number 
   if (stallTimeout === null || stallTimeout === 0) return null;
   if (stallTimeout === undefined) return undefined as unknown as null;
   return stallTimeout * MS_PER_SECOND;
+}
+
+function executeJobAsync(
+  shell: ShellSession,
+  jobId: string,
+  command: string,
+  options: { timeoutMs: number; stallTimeoutMs: number | null },
+  jobRegistry: JobRegistry,
+  session: { touch: () => void },
+): void {
+  shell
+    .execute(command, options)
+    .then((result) => {
+      jobRegistry.setResult(jobId, result);
+      session.touch();
+    })
+    .catch((error) => {
+      jobRegistry.setError(jobId, sanitizeError(error));
+    });
 }
