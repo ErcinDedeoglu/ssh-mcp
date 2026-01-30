@@ -1,10 +1,18 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Config } from '../config/types.js';
 import { ConnectionPool } from '../ssh/pool.js';
+import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { FileTransfer, MAX_FILE_SIZE } from '../ssh/sftp.js';
+import { ensureConnected, formatConnectionError } from './ensure-connected.js';
 import { sanitizeError, sanitizePath } from './utils.js';
 
-export function registerDownloadTool(server: McpServer, pool: ConnectionPool): void {
+export function registerDownloadTool(
+  server: McpServer,
+  config: Config,
+  pool: ConnectionPool,
+  forwardRegistry: ForwardRegistry,
+): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'download',
@@ -26,30 +34,12 @@ export function registerDownloadTool(server: McpServer, pool: ConnectionPool): v
       localPath: string;
     }) => {
       try {
-        const session = pool.get(serverId);
-        if (!session) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `No active connection to server '${serverId}'. Use connect tool first.`,
-              },
-            ],
-          };
+        const connectionResult = await ensureConnected(serverId, { config, pool, forwardRegistry });
+        if (!connectionResult.success) {
+          return formatConnectionError(connectionResult.errorInfo);
         }
 
-        if (!session.isConnected) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `Connection to '${serverId}' is not active. Reconnect required.`,
-              },
-            ],
-          };
-        }
+        const { session } = connectionResult;
 
         const fileTransfer = new FileTransfer(session);
         await fileTransfer.download(remotePath, localPath);

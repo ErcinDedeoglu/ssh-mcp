@@ -1,13 +1,14 @@
-// Tests for download MCP tool
 import { EventEmitter } from 'node:events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Config } from '../../../src/config/types.js';
 import { getMockClient, clearInstances, type MockClientType } from './_fixtures/mock-client.js';
 import { createMockServer } from './_fixtures/mock-server.js';
 import { createTestContext, type TestContext } from './_fixtures/test-setup.js';
 import type { ErrorCallback } from './_fixtures/types.js';
 
 const mockInstances: EventEmitter[] = [];
+let mockConfig: Config;
 
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -32,6 +33,9 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => true),
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
+vi.mock('../../../src/config/loader.js', () => ({
+  loadConfig: () => JSON.parse(JSON.stringify(mockConfig)),
+}));
 
 describe('download', () => {
   let ctx: TestContext;
@@ -39,6 +43,7 @@ describe('download', () => {
   beforeEach(() => {
     clearInstances(mockInstances);
     ctx = createTestContext();
+    mockConfig = ctx.config;
   });
 
   it('downloads file via SFTP', async () => {
@@ -65,7 +70,12 @@ describe('download', () => {
     });
 
     const mockServer = createMockServer();
-    registerDownloadTool(mockServer as unknown as McpServer, ctx.pool);
+    registerDownloadTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('download')!;
     const result = await handler({
@@ -99,7 +109,12 @@ describe('download', () => {
     });
 
     const mockServer = createMockServer();
-    registerDownloadTool(mockServer as unknown as McpServer, ctx.pool);
+    registerDownloadTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('download')!;
     const result = await handler({

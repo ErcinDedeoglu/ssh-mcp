@@ -6,7 +6,6 @@ import { RemoteForwardRegistry } from '../ssh/remote-forward-registry.js';
 import { ShellRegistry } from '../ssh/shell-registry.js';
 
 import { registerListServersTool } from './list-servers.js';
-import { registerConnectTool } from './connect.js';
 import { registerDisconnectTool } from './disconnect.js';
 import { registerExecuteTool } from './execute.js';
 import { registerUploadTool } from './upload.js';
@@ -31,16 +30,15 @@ export function registerAllTools(
   shellRegistry: ShellRegistry,
 ): void {
   registerListServersTool(server, config, pool);
-  registerConnectTool(server, config, pool, forwardRegistry);
   registerDisconnectTool(server, pool, shellRegistry);
-  registerExecuteTool(server, config, pool, shellRegistry);
-  registerUploadTool(server, pool);
-  registerDownloadTool(server, pool);
-  registerConnectionStatusTool(server, pool);
-  registerForwardPortTool(server, pool, forwardRegistry);
+  registerExecuteTool(server, config, pool, forwardRegistry, shellRegistry);
+  registerUploadTool(server, config, pool, forwardRegistry);
+  registerDownloadTool(server, config, pool, forwardRegistry);
+  registerConnectionStatusTool(server, config, pool, forwardRegistry);
+  registerForwardPortTool(server, config, pool, forwardRegistry);
   registerCloseForwardTool(server, forwardRegistry);
   registerListForwardsTool(server, forwardRegistry, remoteForwardRegistry);
-  registerForwardRemotePortTool(server, pool, remoteForwardRegistry);
+  registerForwardRemotePortTool(server, config, pool, forwardRegistry, remoteForwardRegistry);
   registerCloseRemoteForwardTool(server, pool, remoteForwardRegistry);
   registerJumpConnectTool(server, config, pool, forwardRegistry, remoteForwardRegistry);
   registerGetConsoleHistoryTool(server, shellRegistry);
@@ -48,7 +46,6 @@ export function registerAllTools(
 
 export {
   registerListServersTool,
-  registerConnectTool,
   registerDisconnectTool,
   registerExecuteTool,
   registerUploadTool,

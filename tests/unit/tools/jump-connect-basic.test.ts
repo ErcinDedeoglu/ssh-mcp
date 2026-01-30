@@ -9,6 +9,7 @@ import { ConnectionPool } from '../../../src/ssh/pool.js';
 import type { Config, ServerConfig } from '../../../src/config/types.js';
 
 const mockInstances: EventEmitter[] = [];
+let mockConfig: Config;
 
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -39,24 +40,7 @@ vi.mock('node:fs', () => ({
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
 vi.mock('../../../src/config/loader.js', () => ({
-  loadConfig: vi.fn(() => ({
-    servers: [
-      {
-        id: 'jump-host',
-        host: '192.168.1.1',
-        port: 22,
-        username: 'admin',
-        auth: { password: 'jump-secret' },
-      },
-      {
-        id: 'target-server',
-        host: '10.0.0.5',
-        port: 22,
-        username: 'user',
-        auth: { password: 'target-secret' },
-      },
-    ],
-  })),
+  loadConfig: () => JSON.parse(JSON.stringify(mockConfig)),
 }));
 
 function getMockClient(index: number): EventEmitter & { forwardOut: ReturnType<typeof vi.fn> } {
@@ -95,6 +79,7 @@ describe('jump_connect - basic', () => {
     forwardRegistry = new ForwardRegistry();
     remoteForwardRegistry = new RemoteForwardRegistry();
     config = { servers: [jumpServerConfig, targetServerConfig] };
+    mockConfig = config;
   });
 
   it('connects to target through jump host', async () => {
@@ -127,7 +112,17 @@ describe('jump_connect - basic', () => {
 
     const handler = mockServer.getToolHandler('jump_connect')!;
     const resultPromise = handler({ jumpServerId: 'jump-host', targetServerId: 'target-server' });
-    await new Promise((r) => setImmediate(r));
+
+    // Wait for the second client to be created
+    await new Promise((r) => {
+      const checkInterval = setInterval(() => {
+        if (mockInstances.length >= 2) {
+          clearInterval(checkInterval);
+          r(undefined);
+        }
+      }, 10);
+    });
+
     const targetMockClient = getMockClient(1);
     setImmediate(() => targetMockClient.emit('ready'));
 
@@ -140,8 +135,10 @@ describe('jump_connect - basic', () => {
     expect(parsed.isJumpConnection).toBe(true);
   });
 
-  it('returns error if jump host not connected', async () => {
+  it('returns error if jump host not in config', async () => {
     const { registerJumpConnectTool } = await import('../../../src/tools/jump-connect.js');
+
+    mockConfig = { servers: [targetServerConfig] };
 
     const mockServer = createMockServer();
     registerJumpConnectTool(
@@ -153,9 +150,11 @@ describe('jump_connect - basic', () => {
     );
 
     const handler = mockServer.getToolHandler('jump_connect')!;
-    const result = await handler({ jumpServerId: 'jump-host', targetServerId: 'target-server' });
+    const result = await handler({ jumpServerId: 'unknown-jump', targetServerId: 'target-server' });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("Jump host 'jump-host' is not connected");
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toBe('server_not_found');
+    expect(parsed.serverId).toBe('unknown-jump');
   });
 });

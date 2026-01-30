@@ -7,6 +7,7 @@ import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { RemoteForwardRegistry } from '../ssh/remote-forward-registry.js';
 import { SessionKeeper } from '../ssh/session.js';
 import { createJumpStream } from '../ssh/jump-stream.js';
+import { ensureConnected, formatConnectionError } from './ensure-connected.js';
 import { sanitizeError } from './utils.js';
 
 function refreshConfig(config: Config): void {
@@ -29,9 +30,9 @@ export function registerJumpConnectTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (server.tool as any)(
     'jump_connect',
-    'Connect to a server through a jump host (bastion). Auto-reloads config. Jump host must be connected first.',
+    'Connect to a server through a jump host (bastion). Auto-connects to jump host if needed. Auto-reloads config.',
     {
-      jumpServerId: z.string().describe('Server ID of the connected jump host (bastion)'),
+      jumpServerId: z.string().describe('Server ID of the jump host (bastion)'),
       targetServerId: z.string().describe('Server ID of the target server to connect to'),
     },
     async ({ jumpServerId, targetServerId }: { jumpServerId: string; targetServerId: string }) => {
@@ -56,18 +57,12 @@ export function registerJumpConnectTool(
           }
         }
 
-        const jumpSession = pool.get(jumpServerId);
-        if (!jumpSession?.isConnected) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `Jump host '${jumpServerId}' is not connected. Connect to it first.`,
-              },
-            ],
-          };
+        const jumpResult = await ensureConnected(jumpServerId, { config, pool, forwardRegistry });
+        if (!jumpResult.success) {
+          return formatConnectionError(jumpResult.errorInfo);
         }
+
+        const jumpSession = jumpResult.session;
 
         const targetConfig = config.servers.find((s) => s.id === targetServerId);
         if (!targetConfig) {
@@ -76,7 +71,11 @@ export function registerJumpConnectTool(
             content: [
               {
                 type: 'text' as const,
-                text: `Target server '${targetServerId}' not found in configuration`,
+                text: JSON.stringify({
+                  error: 'server_not_found',
+                  serverId: targetServerId,
+                  reason: `Target server '${targetServerId}' not found in configuration`,
+                }),
               },
             ],
           };

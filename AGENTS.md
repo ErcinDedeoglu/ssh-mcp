@@ -4,7 +4,7 @@
 
 ## Overview
 
-MCP server exposing 14 SSH tools (connect, execute, upload/download, port forwarding, jump hosts, etc.) via stdio transport. Uses ssh2 library with connection pooling and auto-reconnection.
+MCP server exposing 13 SSH tools (execute, upload/download, port forwarding, jump hosts, etc.) via stdio transport. Uses ssh2 library with connection pooling, auto-connect, and auto-reconnection.
 
 ## Structure
 
@@ -135,10 +135,10 @@ Shell commands cover: `ls`, `cat`, `mkdir`, `rm`, `chmod`, `stat`, `grep`, `find
 
 **Only add a dedicated tool when `execute` is literally impossible:**
 
-| Tool                 | Why `execute` can't do it                 |
-| -------------------- | ----------------------------------------- |
-| `connect/disconnect` | SSH protocol session management           |
-| `upload/download`    | SFTP subsystem - binary-safe, files >10MB |
-| `connection_status`  | SSH session state inspection              |
-| Port forwarding      | SSH protocol TCP channel multiplexing     |
-| Jump hosts           | Nested SSH connections through bastion    |
+| Tool                | Why `execute` can't do it                 |
+| ------------------- | ----------------------------------------- |
+| `disconnect`        | SSH protocol session management           |
+| `upload/download`   | SFTP subsystem - binary-safe, files >10MB |
+| `connection_status` | SSH session state inspection              |
+| Port forwarding     | SSH protocol TCP channel multiplexing     |
+| Jump hosts          | Nested SSH connections through bastion    |

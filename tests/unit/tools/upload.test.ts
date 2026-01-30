@@ -1,13 +1,14 @@
-// Tests for upload MCP tool
 import { EventEmitter } from 'node:events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Config } from '../../../src/config/types.js';
 import { getMockClient, clearInstances, type MockClientType } from './_fixtures/mock-client.js';
 import { createMockServer } from './_fixtures/mock-server.js';
 import { createTestContext, type TestContext } from './_fixtures/test-setup.js';
 import type { ErrorCallback } from './_fixtures/types.js';
 
 const mockInstances: EventEmitter[] = [];
+let mockConfig: Config;
 
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -32,6 +33,9 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => true),
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
+vi.mock('../../../src/config/loader.js', () => ({
+  loadConfig: () => JSON.parse(JSON.stringify(mockConfig)),
+}));
 
 describe('upload', () => {
   let ctx: TestContext;
@@ -39,6 +43,7 @@ describe('upload', () => {
   beforeEach(() => {
     clearInstances(mockInstances);
     ctx = createTestContext();
+    mockConfig = ctx.config;
   });
 
   it('uploads file via SFTP', async () => {
@@ -62,7 +67,12 @@ describe('upload', () => {
     });
 
     const mockServer = createMockServer();
-    registerUploadTool(mockServer as unknown as McpServer, ctx.pool);
+    registerUploadTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('upload')!;
     const result = await handler({
@@ -93,7 +103,12 @@ describe('upload', () => {
     ctx.pool.add(session);
 
     const mockServer = createMockServer();
-    registerUploadTool(mockServer as unknown as McpServer, ctx.pool);
+    registerUploadTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('upload')!;
     const result = await handler({

@@ -2,8 +2,10 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
 import { ConnectionPool } from '../ssh/pool.js';
+import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { ShellRegistry } from '../ssh/shell-registry.js';
 import { ShellSession } from '../ssh/shell-session.js';
+import { ensureConnected, formatConnectionError } from './ensure-connected.js';
 import { sanitizeError } from './utils.js';
 
 const DEFAULT_COMMAND_TIMEOUT_SECONDS = 60;
@@ -19,6 +21,7 @@ export function registerExecuteTool(
   server: McpServer,
   config: Config,
   pool: ConnectionPool,
+  forwardRegistry: ForwardRegistry,
   shellRegistry: ShellRegistry,
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,37 +46,18 @@ export function registerExecuteTool(
       timeout?: number;
     }) => {
       try {
-        const sshSession = pool.get(serverId);
-        if (!sshSession) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `No active connection to server '${serverId}'. Use connect tool first.`,
-              },
-            ],
-          };
+        const connectionResult = await ensureConnected(serverId, { config, pool, forwardRegistry });
+        if (!connectionResult.success) {
+          return formatConnectionError(connectionResult.errorInfo);
         }
 
-        if (!sshSession.isConnected) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `Connection to '${serverId}' is not active. Reconnect required.`,
-              },
-            ],
-          };
-        }
+        const { session, serverConfig } = connectionResult;
 
-        const shell = await getOrCreateShell(serverId, sshSession.client, shellRegistry);
-        const serverConfig = config.servers.find((s) => s.id === serverId);
+        const shell = await getOrCreateShell(serverId, session.client, shellRegistry);
         const timeoutMs = resolveTimeoutMs(timeout, serverConfig, config);
 
         const result = await shell.execute(command, timeoutMs);
-        sshSession.touch();
+        session.touch();
 
         return {
           content: [

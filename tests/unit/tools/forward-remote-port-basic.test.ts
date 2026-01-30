@@ -1,12 +1,14 @@
 import { EventEmitter } from 'node:events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Config } from '../../../src/config/types.js';
 import { getMockClient, clearInstances, type MockClientType } from './_fixtures/mock-client.js';
 import { createMockServer } from './_fixtures/mock-server.js';
 import { createTestContext, type TestContext } from './_fixtures/test-setup.js';
 import { RemoteForwardRegistry } from '../../../src/ssh/remote-forward-registry.js';
 
 const mockInstances: EventEmitter[] = [];
+let mockConfig: Config;
 
 type ExtendedMockClient = MockClientType & {
   forwardIn: ReturnType<typeof vi.fn>;
@@ -41,6 +43,9 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => true),
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
+vi.mock('../../../src/config/loader.js', () => ({
+  loadConfig: () => JSON.parse(JSON.stringify(mockConfig)),
+}));
 
 describe('forward_remote_port - basic', () => {
   let ctx: TestContext;
@@ -49,6 +54,7 @@ describe('forward_remote_port - basic', () => {
   beforeEach(() => {
     clearInstances(mockInstances);
     ctx = createTestContext();
+    mockConfig = ctx.config;
     remoteForwardRegistry = new RemoteForwardRegistry();
   });
 
@@ -70,7 +76,9 @@ describe('forward_remote_port - basic', () => {
     const mockServer = createMockServer();
     registerForwardRemotePortTool(
       mockServer as unknown as McpServer,
+      ctx.config,
       ctx.pool,
+      ctx.forwardRegistry,
       remoteForwardRegistry,
     );
 
@@ -92,14 +100,16 @@ describe('forward_remote_port - basic', () => {
     expect(parsed.remotePort).toBe(8080);
   });
 
-  it('returns error if server not connected', async () => {
+  it('returns server_not_found for unknown server', async () => {
     const { registerForwardRemotePortTool } =
       await import('../../../src/tools/forward-remote-port.js');
 
     const mockServer = createMockServer();
     registerForwardRemotePortTool(
       mockServer as unknown as McpServer,
+      ctx.config,
       ctx.pool,
+      ctx.forwardRegistry,
       remoteForwardRegistry,
     );
 
@@ -111,7 +121,8 @@ describe('forward_remote_port - basic', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('No active connection');
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toBe('server_not_found');
   });
 
   it('uses auto-assigned port when remotePort is 0', async () => {
@@ -132,7 +143,9 @@ describe('forward_remote_port - basic', () => {
     const mockServer = createMockServer();
     registerForwardRemotePortTool(
       mockServer as unknown as McpServer,
+      ctx.config,
       ctx.pool,
+      ctx.forwardRegistry,
       remoteForwardRegistry,
     );
 
@@ -166,7 +179,9 @@ describe('forward_remote_port - basic', () => {
     const mockServer = createMockServer();
     registerForwardRemotePortTool(
       mockServer as unknown as McpServer,
+      ctx.config,
       ctx.pool,
+      ctx.forwardRegistry,
       remoteForwardRegistry,
     );
 

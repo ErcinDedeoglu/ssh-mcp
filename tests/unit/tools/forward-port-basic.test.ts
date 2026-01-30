@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Config } from '../../../src/config/types.js';
 import type { AddressInfo } from 'node:net';
 import { getMockClient, clearInstances, type MockClientType } from './_fixtures/mock-client.js';
 import { createMockServer } from './_fixtures/mock-server.js';
@@ -9,6 +10,7 @@ import { ForwardRegistry } from '../../../src/ssh/forward-registry.js';
 
 const mockInstances: EventEmitter[] = [];
 const mockNetServers: EventEmitter[] = [];
+let mockConfig: Config;
 
 const { MockClient, mockCreateServer } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -57,6 +59,9 @@ vi.mock('node:fs', () => ({
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
 vi.mock('node:net', () => ({ createServer: mockCreateServer }));
+vi.mock('../../../src/config/loader.js', () => ({
+  loadConfig: () => JSON.parse(JSON.stringify(mockConfig)),
+}));
 
 describe('forward_port - basic', () => {
   let ctx: TestContext;
@@ -66,6 +71,7 @@ describe('forward_port - basic', () => {
     clearInstances(mockInstances);
     mockNetServers.length = 0;
     ctx = createTestContext();
+    mockConfig = ctx.config;
     forwardRegistry = new ForwardRegistry();
   });
 
@@ -81,7 +87,12 @@ describe('forward_port - basic', () => {
     ctx.pool.add(session);
 
     const mockServer = createMockServer();
-    registerForwardPortTool(mockServer as unknown as McpServer, ctx.pool, forwardRegistry);
+    registerForwardPortTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('forward_port')!;
     const result = await handler({
@@ -98,11 +109,16 @@ describe('forward_port - basic', () => {
     expect(parsed.localPort).toBe(54321);
   });
 
-  it('returns error if server not connected', async () => {
+  it('returns server_not_found for unknown server', async () => {
     const { registerForwardPortTool } = await import('../../../src/tools/forward-port.js');
 
     const mockServer = createMockServer();
-    registerForwardPortTool(mockServer as unknown as McpServer, ctx.pool, forwardRegistry);
+    registerForwardPortTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('forward_port')!;
     const result = await handler({
@@ -112,35 +128,39 @@ describe('forward_port - basic', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('No active connection');
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toBe('server_not_found');
   });
 
-  it('returns error if connection not active', async () => {
+  it('returns connection_failed when auto-connect fails', async () => {
     const { registerForwardPortTool } = await import('../../../src/tools/forward-port.js');
-    const { SessionKeeper } = await import('../../../src/ssh/session.js');
-
-    const session = new SessionKeeper(ctx.serverConfig, { maxReconnectAttempts: 0 });
-    const mockClient = getMockClient(mockInstances) as MockClientType;
-    const connectPromise = session.connect();
-    setImmediate(() => mockClient.emit('ready'));
-    await connectPromise;
-    ctx.pool.add(session);
-
-    mockClient.emit('close');
-    await new Promise((resolve) => setImmediate(resolve));
 
     const mockServer = createMockServer();
-    registerForwardPortTool(mockServer as unknown as McpServer, ctx.pool, forwardRegistry);
+    registerForwardPortTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('forward_port')!;
-    const result = await handler({
+    const initialClientCount = mockInstances.length;
+
+    const resultPromise = handler({
       serverId: 'test-server',
       remoteHost: 'db.internal',
       remotePort: 5432,
     });
 
+    await new Promise((r) => setImmediate(r));
+    const newClient = mockInstances[initialClientCount] as MockClientType;
+    newClient.emit('error', new Error('Connection refused'));
+
+    const result = await resultPromise;
+
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('No active connection');
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toBe('connection_failed');
   });
 
   it('uses default local host and port when not specified', async () => {
@@ -155,7 +175,12 @@ describe('forward_port - basic', () => {
     ctx.pool.add(session);
 
     const mockServer = createMockServer();
-    registerForwardPortTool(mockServer as unknown as McpServer, ctx.pool, forwardRegistry);
+    registerForwardPortTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('forward_port')!;
     const result = await handler({

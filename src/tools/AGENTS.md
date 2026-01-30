@@ -4,24 +4,23 @@
 
 ## Overview
 
-14 MCP tools. Each file exports `registerXxxTool()`, called from `index.ts`.
+13 MCP tools. Each file exports `registerXxxTool()`, called from `index.ts`. Most tools auto-connect when needed via `ensureConnected()`.
 
-| Tool                   | File                    | Parameters                                               |
-| ---------------------- | ----------------------- | -------------------------------------------------------- |
-| `list_servers`         | list-servers.ts         | none                                                     |
-| `connect`              | connect.ts              | serverId                                                 |
-| `disconnect`           | disconnect.ts           | serverId                                                 |
-| `execute`              | execute.ts              | serverId, command, timeout?                              |
-| `get_console_history`  | get-console-history.ts  | serverId, limit?                                         |
-| `upload`               | upload.ts               | serverId, localPath, remotePath                          |
-| `download`             | download.ts             | serverId, remotePath, localPath                          |
-| `connection_status`    | connection-status.ts    | serverId                                                 |
-| `jump_connect`         | jump-connect.ts         | jumpServerId, targetServerId                             |
-| `forward_port`         | forward-port.ts         | serverId, remoteHost, remotePort, localHost?, localPort? |
-| `forward_remote_port`  | forward-remote-port.ts  | serverId, localHost, localPort, remoteHost?, remotePort? |
-| `close_forward`        | close-forward.ts        | localPort, localHost?                                    |
-| `close_remote_forward` | close-remote-forward.ts | serverId, remotePort, remoteHost?                        |
-| `list_forwards`        | list-forwards.ts        | serverId?                                                |
+| Tool                   | File                    | Parameters                                               | Auto-Connect |
+| ---------------------- | ----------------------- | -------------------------------------------------------- | ------------ |
+| `list_servers`         | list-servers.ts         | none                                                     | No           |
+| `disconnect`           | disconnect.ts           | serverId                                                 | No           |
+| `execute`              | execute.ts              | serverId, command, timeout?                              | Yes          |
+| `get_console_history`  | get-console-history.ts  | serverId, limit?                                         | No           |
+| `upload`               | upload.ts               | serverId, localPath, remotePath                          | Yes          |
+| `download`             | download.ts             | serverId, remotePath, localPath                          | Yes          |
+| `connection_status`    | connection-status.ts    | serverId                                                 | Yes          |
+| `jump_connect`         | jump-connect.ts         | jumpServerId, targetServerId                             | Yes (jump)   |
+| `forward_port`         | forward-port.ts         | serverId, remoteHost, remotePort, localHost?, localPort? | Yes          |
+| `forward_remote_port`  | forward-remote-port.ts  | serverId, localHost, localPort, remoteHost?, remotePort? | Yes          |
+| `close_forward`        | close-forward.ts        | localPort, localHost?                                    | No           |
+| `close_remote_forward` | close-remote-forward.ts | serverId, remotePort, remoteHost?                        | No           |
+| `list_forwards`        | list-forwards.ts        | serverId?                                                | No           |
 
 ## Adding a New Tool
 
@@ -62,7 +61,8 @@ export function registerYourTool(server: McpServer, pool: ConnectionPool): void 
 
 - Zod schemas for ALL validation
 - `type: 'text' as const` required for TypeScript
-- `pool.get()` before operations, `session.touch()` after
+- Use `ensureConnected()` for tools that need a connection (auto-connects if needed)
+- Call `session.touch()` after operations to prevent idle timeout
 - Always `sanitizeError()` - redacts credentials
 
 ## The `as any` Cast

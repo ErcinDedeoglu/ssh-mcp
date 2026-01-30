@@ -1,12 +1,14 @@
 import { EventEmitter } from 'node:events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Config } from '../../../src/config/types.js';
 import { getMockClient, clearInstances, type MockClientType } from './_fixtures/mock-client.js';
 import { createMockServer } from './_fixtures/mock-server.js';
 import { createTestContext, type TestContext } from './_fixtures/test-setup.js';
 import { ShellRegistry } from '../../../src/ssh/shell-registry.js';
 
 const mockInstances: EventEmitter[] = [];
+let mockConfig: Config;
 
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -32,6 +34,9 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => true),
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
+vi.mock('../../../src/config/loader.js', () => ({
+  loadConfig: () => JSON.parse(JSON.stringify(mockConfig)),
+}));
 
 describe('execute output limits', () => {
   let ctx: TestContext;
@@ -40,31 +45,35 @@ describe('execute output limits', () => {
   beforeEach(() => {
     clearInstances(mockInstances);
     ctx = createTestContext();
+    mockConfig = ctx.config;
     shellRegistry = new ShellRegistry();
   });
 
   it.todo('returns error when output exceeds MAX_OUTPUT_SIZE - covered by E2E tests');
 
-  it('returns error when connection is not active', async () => {
+  it('returns connection_failed when new connection attempt fails', async () => {
     const { registerExecuteTool } = await import('../../../src/tools/execute.js');
-    const { SessionKeeper } = await import('../../../src/ssh/session.js');
-
-    const session = new SessionKeeper(ctx.serverConfig, { maxReconnectAttempts: 0 });
-    const mockClient = getMockClient(mockInstances) as MockClientType;
-    const connectPromise = session.connect();
-    setImmediate(() => mockClient.emit('ready'));
-    await connectPromise;
-    ctx.pool.add(session);
-
-    mockClient.emit('close');
 
     const mockServer = createMockServer();
-    registerExecuteTool(mockServer as unknown as McpServer, ctx.config, ctx.pool, shellRegistry);
+    registerExecuteTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+      shellRegistry,
+    );
 
     const handler = mockServer.getToolHandler('execute')!;
-    const result = await handler({ serverId: 'test-server', command: 'ls' });
+    const resultPromise = handler({ serverId: 'test-server', command: 'ls' });
+
+    await new Promise((r) => setImmediate(r));
+    const newMockClient = getMockClient(mockInstances) as MockClientType;
+    newMockClient.emit('error', new Error('Connection refused'));
+
+    const result = await resultPromise;
 
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('No active connection');
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toBe('connection_failed');
   });
 });

@@ -4,6 +4,7 @@ MCP server for SSH connection management and command execution. Define your serv
 
 ## Features
 
+- **Auto-connect**: Tools automatically connect when needed - no manual `connect` calls required
 - Persistent SSH connections with keep-alive and auto-reconnection
 - Persistent shell sessions - working directory and environment variables persist across commands
 - Execute commands on remote servers
@@ -154,31 +155,32 @@ Restart the MCP client after configuration.
 
 **`execute` is the primary tool.** Use it for all shell operations: `ls`, `cat`, `mkdir`, `rm`, `chmod`, `grep`, `ps`, file I/O, etc. Other tools exist only for operations impossible via shell commands.
 
-| Tool                   | Purpose                                         |
-| ---------------------- | ----------------------------------------------- |
-| `list_servers`         | List configured servers (auto-reloads config)   |
-| `connect`              | Establish SSH connection (auto-reloads config)  |
-| `disconnect`           | Close SSH connection                            |
-| `execute`              | **Run any shell command**                       |
-| `get_console_history`  | Retrieve previous command outputs               |
-| `upload`               | SFTP upload (binary-safe, up to 100MB)          |
-| `download`             | SFTP download (binary-safe, up to 100MB)        |
-| `connection_status`    | Check connection health                         |
-| `jump_connect`         | Connect through jump host (auto-reloads config) |
-| `forward_port`         | Local port forward (access remote services)     |
-| `forward_remote_port`  | Remote port forward (expose local services)     |
-| `list_forwards`        | List active port forwards                       |
-| `close_forward`        | Close a local port forward                      |
-| `close_remote_forward` | Close a remote port forward                     |
+| Tool                   | Purpose                                                 |
+| ---------------------- | ------------------------------------------------------- |
+| `list_servers`         | List configured servers (auto-reloads config)           |
+| `disconnect`           | Close SSH connection                                    |
+| `execute`              | **Run any shell command** (auto-connects)               |
+| `get_console_history`  | Retrieve previous command outputs                       |
+| `upload`               | SFTP upload (binary-safe, up to 100MB, auto-connects)   |
+| `download`             | SFTP download (binary-safe, up to 100MB, auto-connects) |
+| `connection_status`    | Check connection health (auto-connects)                 |
+| `jump_connect`         | Connect through jump host (auto-connects jump host)     |
+| `forward_port`         | Local port forward (auto-connects)                      |
+| `forward_remote_port`  | Remote port forward (auto-connects)                     |
+| `list_forwards`        | List active port forwards                               |
+| `close_forward`        | Close a local port forward                              |
+| `close_remote_forward` | Close a remote port forward                             |
 
 ### execute
 
-**The core tool.** Runs any shell command on the remote server using a persistent shell session.
+**The core tool.** Runs any shell command on the remote server using a persistent shell session. Automatically connects if not already connected.
 
 ```
 Parameters: serverId, command, timeout (optional)
 Returns: stdout, stderr, exitCode
 ```
+
+**Auto-connect:** Just call `execute` - the server connects automatically on first use. No need to call `connect` first.
 
 **State persistence:** Working directory (`cd`) and environment variables (`export`) persist across multiple execute calls on the same server. This allows natural workflows like:
 
@@ -219,9 +221,9 @@ Lists all configured servers with their connection status. **Automatically reloa
 Returns: Array of { id, host, port, username, connected, description? }
 ```
 
-### connect / disconnect / connection_status
+### disconnect / connection_status
 
-Connection lifecycle management. Protocol-level operations that can't be done via shell.
+Connection lifecycle management. Protocol-level operations that can't be done via shell. Note that `connection_status` will auto-connect if not already connected.
 
 ## Troubleshooting
 

@@ -1,12 +1,13 @@
-// Tests for connection_status MCP tool
 import { EventEmitter } from 'node:events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Config } from '../../../src/config/types.js';
 import { getMockClient, clearInstances, type MockClientType } from './_fixtures/mock-client.js';
 import { createMockServer } from './_fixtures/mock-server.js';
 import { createTestContext, type TestContext } from './_fixtures/test-setup.js';
 
 const mockInstances: EventEmitter[] = [];
+let mockConfig: Config;
 
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -31,6 +32,9 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => true),
   statSync: vi.fn(() => ({ mode: 0o100600, size: 1024 })),
 }));
+vi.mock('../../../src/config/loader.js', () => ({
+  loadConfig: () => JSON.parse(JSON.stringify(mockConfig)),
+}));
 
 describe('connection_status', () => {
   let ctx: TestContext;
@@ -38,6 +42,7 @@ describe('connection_status', () => {
   beforeEach(() => {
     clearInstances(mockInstances);
     ctx = createTestContext();
+    mockConfig = ctx.config;
   });
 
   it('returns health status for connected server', async () => {
@@ -53,7 +58,12 @@ describe('connection_status', () => {
     ctx.pool.add(session);
 
     const mockServer = createMockServer();
-    registerConnectionStatusTool(mockServer as unknown as McpServer, ctx.pool);
+    registerConnectionStatusTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('connection_status')!;
     const result = await handler({ serverId: 'test-server' });
@@ -65,19 +75,24 @@ describe('connection_status', () => {
     expect(parsed.lastActivityMs).toBeGreaterThan(0);
   });
 
-  it('returns not connected for unknown server', async () => {
+  it('returns server_not_found for unknown server', async () => {
     const { registerConnectionStatusTool } =
       await import('../../../src/tools/connection-status.js');
 
     const mockServer = createMockServer();
-    registerConnectionStatusTool(mockServer as unknown as McpServer, ctx.pool);
+    registerConnectionStatusTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('connection_status')!;
     const result = await handler({ serverId: 'unknown-server' });
 
+    expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.connected).toBe(false);
-    expect(parsed.message).toBe('No active connection');
+    expect(parsed.error).toBe('server_not_found');
   });
 
   it('includes reconnect attempt when reconnecting', async () => {
@@ -85,18 +100,26 @@ describe('connection_status', () => {
       await import('../../../src/tools/connection-status.js');
     const { SessionKeeper } = await import('../../../src/ssh/session.js');
 
-    const session = new SessionKeeper(ctx.serverConfig, { baseReconnectDelayMs: 1000 });
+    const session = new SessionKeeper(ctx.serverConfig, { baseReconnectDelayMs: 10 });
     const mockClient = getMockClient(mockInstances) as MockClientType;
     const connectPromise = session.connect();
     setImmediate(() => mockClient.emit('ready'));
     await connectPromise;
     ctx.pool.add(session);
 
+    const reconnectingPromise = new Promise((resolve) => {
+      session.once('reconnecting', resolve);
+    });
     mockClient.emit('close');
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await reconnectingPromise;
 
     const mockServer = createMockServer();
-    registerConnectionStatusTool(mockServer as unknown as McpServer, ctx.pool);
+    registerConnectionStatusTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+    );
 
     const handler = mockServer.getToolHandler('connection_status')!;
     const result = await handler({ serverId: 'test-server' });

@@ -1,8 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Config } from '../config/types.js';
 import { ConnectionPool } from '../ssh/pool.js';
+import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { RemoteForwardRegistry } from '../ssh/remote-forward-registry.js';
 import { createRemoteForward } from '../ssh/remote-forward.js';
+import { ensureConnected, formatConnectionError } from './ensure-connected.js';
 import { sanitizeError } from './utils.js';
 
 const DEFAULT_REMOTE_HOST = '127.0.0.1';
@@ -10,7 +13,9 @@ const DEFAULT_REMOTE_PORT = 0;
 
 export function registerForwardRemotePortTool(
   server: McpServer,
+  config: Config,
   pool: ConnectionPool,
+  forwardRegistry: ForwardRegistry,
   remoteForwardRegistry: RemoteForwardRegistry,
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,30 +66,12 @@ export function registerForwardRemotePortTool(
       const bindPort = remotePort ?? DEFAULT_REMOTE_PORT;
 
       try {
-        const session = pool.get(serverId);
-        if (!session) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `No active connection to server '${serverId}'. Use connect tool first.`,
-              },
-            ],
-          };
+        const connectionResult = await ensureConnected(serverId, { config, pool, forwardRegistry });
+        if (!connectionResult.success) {
+          return formatConnectionError(connectionResult.errorInfo);
         }
 
-        if (!session.isConnected) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `Connection to '${serverId}' is not active. Reconnect required.`,
-              },
-            ],
-          };
-        }
+        const { session } = connectionResult;
 
         const result = await createRemoteForward(
           {
