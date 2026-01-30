@@ -39,7 +39,7 @@ export function registerListServersTool(
           port: serverConfig.port,
           username: serverConfig.username,
           description: serverConfig.description,
-          connected: pool.has(serverConfig.id),
+          connected: pool.get(serverConfig.id)?.isConnected ?? false,
         }));
 
         return {

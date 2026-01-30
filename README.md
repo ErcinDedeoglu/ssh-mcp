@@ -226,17 +226,34 @@ For very long-running commands, use background execution to avoid blocking:
 execute_background(serverId, "npm run build")
 → { jobId: "job_abc123", status: "running" }
 
-# Poll for completion
+# Poll for status - output streams in real-time
 check_job(jobId)
-→ { status: "running", output: "Building..." }
-→ { status: "completed", result: { stdout, exitCode } }
+→ { status: "running", partialOutput: "Installing dependencies...",
+    bytesReceived: 1024, elapsedMs: 5000, msSinceLastOutput: 200 }
+
+check_job(jobId)
+→ { status: "running", partialOutput: "Installing dependencies...\nBuilding...",
+    bytesReceived: 2048, elapsedMs: 10000, msSinceLastOutput: 150 }
+
+# Final result when complete
+check_job(jobId)
+→ { status: "completed", result: { stdout, exitCode }, durationMs: 15000 }
 
 # Cancel if needed
 cancel_job(jobId)
 → { status: "cancelled", interruptSent: true }
 ```
 
-Background jobs run independently. Use `check_job` to poll status and retrieve output when done.
+**Real-time streaming:** Output is available immediately as commands produce it - no waiting for completion. Progress indicators help track long-running jobs:
+
+| Field               | Description                                    |
+| ------------------- | ---------------------------------------------- |
+| `partialOutput`     | Output received so far (streams in)            |
+| `bytesReceived`     | Total bytes of output received                 |
+| `elapsedMs`         | Time since job started                         |
+| `msSinceLastOutput` | Time since last output chunk (stall detection) |
+
+Background jobs run independently. Poll `check_job` to monitor progress and retrieve output.
 
 ### get_console_history
 

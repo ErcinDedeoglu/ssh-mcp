@@ -100,4 +100,31 @@ describe('list_servers', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed[0].connected).toBe(true);
   });
+
+  it('returns connected=false when session is in pool but disconnected', async () => {
+    const { registerListServersTool } = await import('../../../src/tools/list-servers.js');
+    const { SessionKeeper } = await import('../../../src/ssh/session.js');
+
+    const session = new SessionKeeper(ctx.serverConfig, { maxReconnectAttempts: 5 });
+    const mockClient = getMockClient(mockInstances) as MockClientType;
+
+    const connectPromise = session.connect();
+    setImmediate(() => mockClient.emit('ready'));
+    await connectPromise;
+    ctx.pool.add(session);
+    expect(session.isConnected).toBe(true);
+
+    mockClient.emit('close');
+    expect(session.isConnected).toBe(false);
+    expect(ctx.pool.has(ctx.serverConfig.id)).toBe(true);
+
+    const mockServer = createMockServer();
+    registerListServersTool(mockServer as unknown as McpServer, ctx.config, ctx.pool);
+
+    const handler = mockServer.getToolHandler('list_servers')!;
+    const result = await handler({});
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed[0].connected).toBe(false);
+  });
 });
