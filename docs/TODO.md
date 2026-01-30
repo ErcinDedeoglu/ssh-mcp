@@ -36,6 +36,26 @@
 - [x] **Server shutdown cleanup verification** - Test in `tests/integration/server.test.ts` verifies `shutdown()` closes all forward servers and sockets.
 - [x] **Rapid forward create/delete cycles** - Test in `port-forward-connections.e2e.test.ts` runs 10 create/delete cycles.
 
+## Agent UX Gaps (Tool descriptions missing critical info)
+
+### High Priority
+
+- [ ] **Add workflow guidance to `execute` description** - Agent doesn't know `connect` must be called first
+- [ ] **Document jump host no-reconnect in `jump_connect`** - `maxReconnectAttempts: 0` not mentioned, agent keeps trying dead connection
+
+### Medium Priority
+
+- [ ] **Add 100MB limit to upload/download descriptions** - Agent only discovers limit after transfer fails
+- [ ] **Wrap `list_servers` in try-catch** - Only tool without error handling, config errors crash instead of returning error
+- [ ] **Add idle warning to `connection_status` response** - Connection idle after 15min but no auto-disconnect or warning
+- [ ] **Add history count warning to `disconnect` response** - Shell history (100 entries) destroyed without warning
+
+### Low Priority
+
+- [ ] **Create MCP resource with workflow guide** - Document: list_servers → connect → execute → disconnect
+- [ ] **Document timeout hierarchy in `execute`** - param > server config > global defaults not explained
+- [ ] **Add `touch()` to read-only tools or document behavior** - connection_status/get_console_history don't reset idle timer
+
 ## Security Debt (SECURITY.md claims but not implemented)
 
 - [ ] **SSH host key verification** - Prevent MITM attacks (doc says "MUST implement")
