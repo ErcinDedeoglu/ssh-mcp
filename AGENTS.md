@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Generated: 2026-01-30 | Commit: 3f385fa | Branch: master -->
+<!-- Generated: 2026-01-30 | Commit: 8653dd2 | Branch: master -->
 
 ## Overview
 
@@ -112,10 +112,10 @@ tests/
 ## Commands
 
 ```bash
-npm test                    # Unit tests (fast, mocked)
-npm run test:e2e            # E2E tests - parallel 4 shards (default)
+npm test                    # Unit tests (fast, mocked, parallel)
+npm run test:e2e            # E2E tests - parallel 8 shards (default)
 npm run test:e2e:sequential # E2E tests - single shard for debugging
-SHARDS=8 npm run test:e2e   # E2E tests - custom shard count
+SHARDS=4 npm run test:e2e   # E2E tests - custom shard count
 npm run test:all            # Unit + E2E
 npm run build               # TypeScript → dist/
 npm run lint                # ESLint + Prettier + typecheck

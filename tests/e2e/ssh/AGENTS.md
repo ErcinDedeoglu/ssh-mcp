@@ -70,9 +70,9 @@ Ports are calculated via `getShardPorts()` in `ssh.setup.ts`.
 ## Running Tests
 
 ```bash
-npm run test:e2e              # Parallel with 4 shards (default)
+npm run test:e2e              # Parallel with 8 shards (default)
 npm run test:e2e:sequential   # Single shard for debugging
-SHARDS=8 npm run test:e2e     # Custom shard count
+SHARDS=4 npm run test:e2e     # Custom shard count
 npm run test:e2e:up           # Start Docker containers only
 npm run test:e2e:run          # Run tests (assumes Docker running)
 npm run test:e2e:down         # Stop Docker containers
