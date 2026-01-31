@@ -108,21 +108,15 @@ _Compiled from analysis of 170+ SSH MCP implementations and 2,100+ related issue
 
 ### 🟡 Usability Gaps (Medium Priority)
 
-- [ ] **cwd parameter** - Users expect `cwd` per-command without needing prior `cd`. Add optional `cwd` to execute tool.
-- [ ] **Sudo support** - Cannot run elevated commands. Add `sudo: true` parameter with optional password.
 - [ ] **Server tags/groups** - Cannot bulk-execute on multiple servers. Add `tags: ["prod", "web"]` to server config + `execute_on_tag` tool.
 - [ ] **Dry-run mode** - Cannot preview commands. Add `dryRun: true` parameter returning command preview.
 - [ ] **SSH config import** - Must duplicate `~/.ssh/config` manually. Add option to import host aliases.
-- [ ] **Health check tool** - Must parse raw `free -m`, `df -h` output. Add `health_check` tool returning structured metrics.
 - [ ] **Home path expansion bug** - `expandRemotePath()` hardcodes `/home/${username}`, breaks on macOS (`/Users/`) and non-standard homes. Query via `$HOME`.
 
 ### 🟢 Nice-to-Have Gaps (Low Priority)
 
 - [ ] **Docker deployment** - No container support. Add Dockerfile + docker-compose.yml.
-- [ ] **rsync/sync tool** - Single file transfer only. Add `sync` tool for bidirectional sync.
-- [ ] **Database backup tools** - Must run manual mysqldump. Add `backup_database` tool.
-- [ ] **Process management** - Must parse `ps` output. Add `list_processes` / `kill_process` tools.
-- [ ] **Log tailing tool** - No dedicated streaming. Add `tail_logs` tool.
+- [ ] **Log tailing tool** - No dedicated streaming. Add `tail_logs` tool. (Requires streaming output support)
 - [ ] **Tool activation system** - All 13 tools always loaded. Add `enabledTools` config to reduce AI context.
 - [ ] **Windows server support** - Hardcoded Linux paths. Document limitation or add PowerShell support.
 
