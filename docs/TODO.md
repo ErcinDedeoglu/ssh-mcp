@@ -103,7 +103,7 @@ _Compiled from analysis of 170+ SSH MCP implementations and 2,100+ related issue
 
 - [ ] **Command whitelisting/blacklisting** - Users expect regex-based allow/block patterns. Currently ANY command can run (`rm -rf /`, `shutdown`). Add `security.allowedCommands` / `security.blockedCommands` to config.
 - [ ] **Audit logging** - No structured logging for compliance (SOC2, ISO 27001). Add JSON audit trail: timestamp, serverId, tool, command, exitCode, commandHash.
-- [ ] **Output truncation** - Returns up to 10MB output, will crash Claude Code. Add `maxOutputLength` config (default: 10000 chars) with truncation notice.
+- [x] **Output truncation** - Added `maxOutputLength` parameter to `execute` and `check_job` tools (default: 10000 chars). Response includes `truncated: true` when output is truncated.
 - [ ] **SECURITY.md missing** - README references it but file doesn't exist. Create comprehensive threat model doc.
 
 ### 🟡 Usability Gaps (Medium Priority)

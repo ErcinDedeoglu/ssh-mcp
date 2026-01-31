@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { JobRegistry } from '../ssh/job-registry.js';
+import { truncateOutput, DEFAULT_MAX_OUTPUT_LENGTH } from './utils.js';
 
 export function registerCheckJobTool(server: McpServer, jobRegistry: JobRegistry): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -8,11 +9,20 @@ export function registerCheckJobTool(server: McpServer, jobRegistry: JobRegistry
     'check_job',
     'Check status and streaming output of a background job. ' +
       'Returns: status, partialOutput (real-time), bytesReceived, elapsedMs, msSinceLastOutput, and result when completed. ' +
-      'Poll periodically to monitor progress. If msSinceLastOutput is very high, the command may be stalled.',
+      'Poll periodically to monitor progress. If msSinceLastOutput is very high, the command may be stalled. ' +
+      'Output is truncated to maxOutputLength (default: 10000 chars). ' +
+      'Response includes partialOutputTruncated/resultTruncated=true when truncated.',
     {
       jobId: z.string().describe('Job ID returned from execute_background'),
+      maxOutputLength: z
+        .number()
+        .optional()
+        .describe(
+          'Maximum output length in chars before truncation. ' +
+            'Default: 10000. Prevents large outputs from overwhelming the client.',
+        ),
     },
-    async ({ jobId }: { jobId: string }) => {
+    async ({ jobId, maxOutputLength }: { jobId: string; maxOutputLength?: number }) => {
       const job = jobRegistry.get(jobId);
 
       if (!job) {
@@ -51,8 +61,15 @@ export function registerCheckJobTool(server: McpServer, jobRegistry: JobRegistry
         response.durationMs = job.completedAt - job.startedAt;
       }
 
+      const effectiveMaxOutputLength = maxOutputLength ?? DEFAULT_MAX_OUTPUT_LENGTH;
+
       if (job.result) {
-        response.result = job.result;
+        const { text: stdout, truncated } = truncateOutput(
+          job.result.stdout,
+          effectiveMaxOutputLength,
+        );
+        response.result = { ...job.result, stdout };
+        response.resultTruncated = truncated;
       }
 
       if (job.error) {
@@ -60,7 +77,12 @@ export function registerCheckJobTool(server: McpServer, jobRegistry: JobRegistry
       }
 
       if (job.output) {
-        response.partialOutput = job.output;
+        const { text: partialOutput, truncated } = truncateOutput(
+          job.output,
+          effectiveMaxOutputLength,
+        );
+        response.partialOutput = partialOutput;
+        response.partialOutputTruncated = truncated;
       }
 
       return {

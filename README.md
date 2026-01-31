@@ -217,6 +217,12 @@ execute(serverId, "apt upgrade -y", { stallTimeout: 0 })
 execute(serverId, "npm install", { stallTimeout: 0 })
 ```
 
+**Output truncation:** To prevent large outputs from overwhelming MCP clients, output is truncated to `maxOutputLength` characters (default: 10,000). When truncated, the response includes `truncated: true` and a notice showing total size:
+
+```
+execute(serverId, "cat large-file.log", { maxOutputLength: 50000 })
+```
+
 ### execute_background / check_job / cancel_job
 
 For very long-running commands, use background execution to avoid blocking:

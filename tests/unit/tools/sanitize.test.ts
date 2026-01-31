@@ -1,7 +1,11 @@
-// Tests for sanitizeError and sanitizePath utility functions
 import { describe, it, expect } from 'vitest';
 import { homedir } from 'node:os';
-import { sanitizeError, sanitizePath } from '../../../src/tools/utils.js';
+import {
+  sanitizeError,
+  sanitizePath,
+  truncateOutput,
+  DEFAULT_MAX_OUTPUT_LENGTH,
+} from '../../../src/tools/utils.js';
 
 describe('sanitizeError', () => {
   it('replaces home directory with ~', () => {
@@ -61,5 +65,43 @@ describe('sanitizePath', () => {
     const path = '/var/log/app.log';
     const sanitized = sanitizePath(path);
     expect(sanitized).toBe('/var/log/app.log');
+  });
+});
+
+describe('truncateOutput', () => {
+  it('returns unchanged output when under limit', () => {
+    const output = 'short output';
+    const result = truncateOutput(output, 100);
+    expect(result.text).toBe('short output');
+    expect(result.truncated).toBe(false);
+    expect(result.originalLength).toBe(12);
+  });
+
+  it('returns unchanged output when exactly at limit', () => {
+    const output = 'x'.repeat(100);
+    const result = truncateOutput(output, 100);
+    expect(result.text).toBe(output);
+    expect(result.truncated).toBe(false);
+    expect(result.originalLength).toBe(100);
+  });
+
+  it('truncates output when over limit', () => {
+    const output = 'x'.repeat(150);
+    const result = truncateOutput(output, 100);
+    expect(result.truncated).toBe(true);
+    expect(result.originalLength).toBe(150);
+    expect(result.text).toContain('x'.repeat(100));
+    expect(result.text).toContain('[OUTPUT TRUNCATED: showing 100 of 150 chars]');
+  });
+
+  it('includes formatted numbers in truncation notice', () => {
+    const output = 'x'.repeat(15000);
+    const result = truncateOutput(output, 10000);
+    expect(result.text).toContain('10,000');
+    expect(result.text).toContain('15,000');
+  });
+
+  it('has correct default max output length', () => {
+    expect(DEFAULT_MAX_OUTPUT_LENGTH).toBe(10000);
   });
 });

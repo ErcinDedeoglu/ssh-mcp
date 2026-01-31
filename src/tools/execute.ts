@@ -6,7 +6,7 @@ import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { ShellRegistry } from '../ssh/shell-registry.js';
 import { ShellSession } from '../ssh/shell-session.js';
 import { ensureConnected, formatConnectionError } from './ensure-connected.js';
-import { sanitizeError } from './utils.js';
+import { sanitizeError, truncateOutput, DEFAULT_MAX_OUTPUT_LENGTH } from './utils.js';
 
 const DEFAULT_COMMAND_TIMEOUT_SECONDS = 60;
 const MS_PER_SECOND = 1000;
@@ -31,7 +31,9 @@ export function registerExecuteTool(
       'IMPORTANT: For long-running commands (apt, npm install, builds) that may not produce output for extended periods, ' +
       'pass stallTimeout=0 to disable stall detection. Default stall timeout is 10s. ' +
       'For very long commands (>5min), use execute_background instead. ' +
-      'Timeout priority: timeout param > server config > global defaults > 60s.',
+      'Timeout priority: timeout param > server config > global defaults > 60s. ' +
+      'Output is truncated to maxOutputLength (default: 10000 chars) to prevent overwhelming the client. ' +
+      'Response includes truncated=true when output was truncated.',
     {
       serverId: z.string().describe('Unique identifier of the server to execute command on'),
       command: z.string().describe('Shell command to execute on the remote server'),
@@ -54,6 +56,13 @@ export function registerExecuteTool(
           'Stall timeout in seconds - max time without output before failing. ' +
             'Default: 10s. Set to 0 or null to disable for long-running commands.',
         ),
+      maxOutputLength: z
+        .number()
+        .optional()
+        .describe(
+          'Maximum output length in chars before truncation. ' +
+            'Default: 10000. Prevents large outputs from overwhelming the client.',
+        ),
     },
     async ({
       serverId,
@@ -61,12 +70,14 @@ export function registerExecuteTool(
       stdin,
       timeout,
       stallTimeout,
+      maxOutputLength,
     }: {
       serverId: string;
       command: string;
       stdin?: string;
       timeout?: number;
       stallTimeout?: number | null;
+      maxOutputLength?: number;
     }) => {
       try {
         const connectionResult = await ensureConnected(serverId, { config, pool, forwardRegistry });
@@ -83,11 +94,21 @@ export function registerExecuteTool(
         const result = await shell.execute(command, { timeoutMs, stallTimeoutMs, stdin });
         session.touch();
 
+        const effectiveMaxOutputLength = maxOutputLength ?? DEFAULT_MAX_OUTPUT_LENGTH;
+        const { text: stdout, truncated } = truncateOutput(result.stdout, effectiveMaxOutputLength);
+
         return {
           content: [
             {
               type: 'text' as const,
-              text: JSON.stringify({ serverId, command, ...result }),
+              text: JSON.stringify({
+                serverId,
+                command,
+                stdout,
+                stderr: result.stderr,
+                exitCode: result.exitCode,
+                truncated,
+              }),
             },
           ],
         };
