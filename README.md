@@ -123,7 +123,11 @@ Agent forwarding lets you use your local SSH keys on remote servers (e.g., for g
 execute(serverId, "git clone git@github.com:private/repo.git", { agentForward: true })
 ```
 
-**Note:** Agent forwarding is set when the shell session starts. To change it, disconnect first.
+**Auto-recreate:** If you request `agentForward: true` but the existing shell lacks it, the shell is automatically recreated. This loses cwd and env vars. Response includes a `notice` when this happens:
+
+```json
+{ "stdout": "...", "exitCode": 0, "notice": "Shell recreated with agent forwarding enabled..." }
+```
 
 **Requirements:** SSH agent running with keys loaded (`ssh-add -l` to verify). The `SSH_AUTH_SOCK` environment variable must be set.
 
@@ -264,7 +268,7 @@ execute(serverId, "cat large-file.log", { maxOutputLength: 50000 })
 execute(serverId, "git clone git@github.com:private/repo.git", { agentForward: true })
 ```
 
-See [SSH Agent Forwarding](#ssh-agent-forwarding) for the two-level control system. Note: agent forwarding is set when the shell session starts - disconnect first to change it.
+See [SSH Agent Forwarding](#ssh-agent-forwarding) for the two-level control system. If you request forwarding but the shell lacks it, it's auto-recreated (cwd/env lost).
 
 ### execute_background / check_job / cancel_job
 

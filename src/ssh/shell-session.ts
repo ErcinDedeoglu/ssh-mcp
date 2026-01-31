@@ -17,6 +17,14 @@ import {
 } from './shell-session.types.js';
 import { createShellStream, waitForInitialPrompt, waitForMcpPrompt } from './shell-session.io.js';
 import { ShellHistory } from './shell-session-history.js';
+import {
+  createTimerState,
+  startTimeoutTimer,
+  startStallTimer,
+  resetStallTimer,
+  clearTimers,
+  type TimerState,
+} from './shell-session-timers.js';
 export type { ShellExecuteResult, HistoryEntry, ExecuteOptions } from './shell-session.types.js';
 
 export class ShellSession {
@@ -27,8 +35,7 @@ export class ShellSession {
   private commandQueue: PendingCommand[] = [];
   private readonly options: ResolvedShellOptions;
   private readonly agentForward: boolean;
-  private stallTimer: ReturnType<typeof setTimeout> | null = null;
-  private timeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly timers: TimerState = createTimerState();
   private outputSize = 0;
   private readonly historyTracker = new ShellHistory();
 
@@ -42,6 +49,9 @@ export class ShellSession {
   }
   get isReady(): boolean {
     return this.ready && this.stream !== null;
+  }
+  get hasAgentForward(): boolean {
+    return this.agentForward;
   }
   async initialize(client: Client): Promise<void> {
     if (this.stream) return;
@@ -72,7 +82,7 @@ export class ShellSession {
     });
   }
   destroy(): void {
-    this.clearTimers();
+    clearTimers(this.timers);
     this.rejectPendingCommands(new Error('Shell session destroyed'));
     if (this.stream) {
       this.stream.end('exit\n');
@@ -100,7 +110,7 @@ export class ShellSession {
     try {
       this.currentCommand.onOutput?.(data);
     } catch {
-      /* callback errors ignored to avoid breaking execution */
+      // Callback errors ignored to avoid breaking command execution
     }
     const parsed = parseMarkedOutput(this.buffer, this.currentCommand.marker);
     if (parsed) {
@@ -119,7 +129,7 @@ export class ShellSession {
       this.currentCommand.reject(err);
       this.currentCommand = null;
     }
-    this.clearTimers();
+    clearTimers(this.timers);
     this.processNextCommand();
   }
   cancelCurrentCommand(): boolean {
@@ -136,20 +146,31 @@ export class ShellSession {
     this.outputSize = 0;
     this.buffer = '';
     this.historyTracker.startCommand();
-    this.startTimeoutTimer();
-    this.startStallTimer();
-    const wrapped = wrapCommand(this.currentCommand.command, this.currentCommand.marker);
+    const cmd = this.currentCommand;
+    startTimeoutTimer(this.timers, cmd.timeoutMs, () =>
+      this.handleError(new Error(`Command timed out after ${cmd.timeoutMs}ms`)),
+    );
+    startStallTimer(this.timers, cmd.stallTimeoutMs, () =>
+      this.handleError(new Error(`Command stalled - no output for ${cmd.stallTimeoutMs}ms`)),
+    );
+    const wrapped = wrapCommand(cmd.command, cmd.marker);
     this.stream.write(wrapped);
-    if (this.currentCommand.stdin !== undefined) {
-      const stdinContent = this.currentCommand.stdin;
-      this.stream.write(stdinContent.endsWith('\n') ? stdinContent : stdinContent + '\n');
+    if (cmd.stdin !== undefined) {
+      this.stream.write(cmd.stdin.endsWith('\n') ? cmd.stdin : cmd.stdin + '\n');
       this.stream.write('\x04');
     }
   }
-
+  private resetStallTimer(): void {
+    if (!this.currentCommand) return;
+    resetStallTimer(this.timers, this.currentCommand.stallTimeoutMs, () =>
+      this.handleError(
+        new Error(`Command stalled - no output for ${this.currentCommand!.stallTimeoutMs}ms`),
+      ),
+    );
+  }
   private completeCurrentCommand(output: string, exitCode: number): void {
     if (!this.currentCommand) return;
-    this.clearTimers();
+    clearTimers(this.timers);
     this.historyTracker.record(this.currentCommand.command, output, exitCode);
     this.currentCommand.resolve({ stdout: output, stderr: '', exitCode });
     this.currentCommand = null;
@@ -158,35 +179,6 @@ export class ShellSession {
   getHistory(limit?: number): HistoryEntry[] {
     return this.historyTracker.get(limit);
   }
-  private startTimeoutTimer(): void {
-    if (!this.currentCommand) return;
-    const ms = this.currentCommand.timeoutMs;
-    this.timeoutTimer = setTimeout(
-      () => this.handleError(new Error(`Command timed out after ${ms}ms`)),
-      ms,
-    );
-  }
-  private startStallTimer(): void {
-    if (!this.currentCommand) return;
-    const stallMs = this.currentCommand.stallTimeoutMs;
-    if (stallMs === null || stallMs === 0) return;
-    this.stallTimer = setTimeout(
-      () => this.handleError(new Error(`Command stalled - no output for ${stallMs}ms`)),
-      stallMs,
-    );
-  }
-  private resetStallTimer(): void {
-    if (!this.stallTimer) return;
-    clearTimeout(this.stallTimer);
-    this.stallTimer = null;
-    this.startStallTimer();
-  }
-  private clearTimers(): void {
-    if (this.timeoutTimer) clearTimeout(this.timeoutTimer);
-    if (this.stallTimer) clearTimeout(this.stallTimer);
-    this.timeoutTimer = this.stallTimer = null;
-  }
-
   private rejectPendingCommands(error: Error): void {
     if (this.currentCommand) {
       this.currentCommand.reject(error);
@@ -194,6 +186,6 @@ export class ShellSession {
     }
     this.commandQueue.forEach((p) => p.reject(error));
     this.commandQueue = [];
-    this.clearTimers();
+    clearTimers(this.timers);
   }
 }

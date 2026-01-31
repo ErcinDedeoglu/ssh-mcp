@@ -176,3 +176,23 @@ describe('ShellSession onOutput callback', () => {
     expect(onOutput).toHaveBeenCalledWith('Hello 世界 🌍');
   });
 });
+
+describe('ShellSession hasAgentForward getter', () => {
+  it('returns true when created with agentForward: true', async () => {
+    const { ShellSession } = await import('../../../src/ssh/shell-session.js');
+    const session = new ShellSession({ agentForward: true });
+    expect(session.hasAgentForward).toBe(true);
+  });
+
+  it('returns false when created with agentForward: false', async () => {
+    const { ShellSession } = await import('../../../src/ssh/shell-session.js');
+    const session = new ShellSession({ agentForward: false });
+    expect(session.hasAgentForward).toBe(false);
+  });
+
+  it('returns false when agentForward not specified', async () => {
+    const { ShellSession } = await import('../../../src/ssh/shell-session.js');
+    const session = new ShellSession({});
+    expect(session.hasAgentForward).toBe(false);
+  });
+});

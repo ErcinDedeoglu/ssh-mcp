@@ -31,6 +31,10 @@ export function buildSshConnectConfig(
 ): ConnectConfig {
   const timeoutSeconds = serverConfig.timeouts?.connection ?? DEFAULT_CONNECTION_TIMEOUT_SECONDS;
 
+  const agentSocketPath = process.env.SSH_AUTH_SOCK;
+  const configAllowsAgent = serverConfig.agentForward ?? true;
+  const agentAvailable = configAllowsAgent && !!agentSocketPath;
+
   const baseConfig: ConnectConfig = {
     host: serverConfig.host,
     port: serverConfig.port,
@@ -39,8 +43,8 @@ export function buildSshConnectConfig(
     keepaliveInterval: options.keepaliveIntervalMs,
     keepaliveCountMax: options.keepaliveCountMax,
     sock: options.jumpStream,
-    agent: (serverConfig.agentForward ?? true) ? process.env.SSH_AUTH_SOCK : undefined,
-    agentForward: serverConfig.agentForward ?? true,
+    agent: agentAvailable ? agentSocketPath : undefined,
+    agentForward: agentAvailable,
   };
 
   if (isPasswordAuth(serverConfig.auth)) {

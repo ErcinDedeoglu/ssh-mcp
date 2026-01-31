@@ -45,7 +45,7 @@ vi.mock('../../../src/config/loader.js', () => ({
   loadConfig: () => JSON.parse(JSON.stringify(mockConfig)),
 }));
 
-describe('execute - agentForward', () => {
+describe('execute - agentForward shell recreate', () => {
   let ctx: TestContext;
   let shellRegistry: ShellRegistry;
 
@@ -67,9 +67,10 @@ describe('execute - agentForward', () => {
     }));
   });
 
-  it('passes agentForward to ShellSession when config allows and param is true', async () => {
+  it('recreates shell when agentForward requested but existing shell lacks it', async () => {
     const { registerExecuteTool } = await import('../../../src/tools/execute.js');
     const { SessionKeeper } = await import('../../../src/ssh/session.js');
+    const { ShellSession } = await import('../../../src/ssh/shell-session.js');
 
     const session = new SessionKeeper(ctx.serverConfig);
     const mockClient = getMockClient(mockInstances) as MockClientType;
@@ -78,7 +79,10 @@ describe('execute - agentForward', () => {
     await connectPromise;
     ctx.pool.add(session);
 
-    mockExecute.mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
+    const existingShell = new ShellSession({ agentForward: false });
+    shellRegistry.set('test-server', existingShell);
+
+    mockExecute.mockResolvedValue({ stdout: 'ok', stderr: '', exitCode: 0 });
 
     const mockServer = createMockServer();
     registerExecuteTool(
@@ -90,18 +94,25 @@ describe('execute - agentForward', () => {
     );
 
     const handler = mockServer.getToolHandler('execute')!;
-    await handler({
+    const result = await handler({
       serverId: 'test-server',
-      command: 'git clone git@github.com:test/repo.git',
+      command: 'git clone',
       agentForward: true,
     });
 
-    expect(ShellSessionMock).toHaveBeenCalledWith({ agentForward: true });
+    expect(mockDestroy).toHaveBeenCalled();
+    expect(ShellSessionMock).toHaveBeenCalledTimes(2);
+    expect(ShellSessionMock).toHaveBeenLastCalledWith({ agentForward: true });
+
+    const responseText = result.content[0].text;
+    const response = JSON.parse(responseText);
+    expect(response.notice).toContain('Shell recreated');
   });
 
-  it('passes agentForward: false when param is not provided', async () => {
+  it('reuses existing shell when agentForward not requested', async () => {
     const { registerExecuteTool } = await import('../../../src/tools/execute.js');
     const { SessionKeeper } = await import('../../../src/ssh/session.js');
+    const { ShellSession } = await import('../../../src/ssh/shell-session.js');
 
     const session = new SessionKeeper(ctx.serverConfig);
     const mockClient = getMockClient(mockInstances) as MockClientType;
@@ -110,7 +121,10 @@ describe('execute - agentForward', () => {
     await connectPromise;
     ctx.pool.add(session);
 
-    mockExecute.mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
+    const existingShell = new ShellSession({ agentForward: false });
+    shellRegistry.set('test-server', existingShell);
+
+    mockExecute.mockResolvedValue({ stdout: 'ok', stderr: '', exitCode: 0 });
 
     const mockServer = createMockServer();
     registerExecuteTool(
@@ -122,17 +136,18 @@ describe('execute - agentForward', () => {
     );
 
     const handler = mockServer.getToolHandler('execute')!;
-    await handler({ serverId: 'test-server', command: 'ls' });
+    const result = await handler({ serverId: 'test-server', command: 'ls' });
 
-    expect(ShellSessionMock).toHaveBeenCalledWith({ agentForward: false });
+    expect(mockDestroy).not.toHaveBeenCalled();
+    expect(ShellSessionMock).toHaveBeenCalledTimes(1);
+
+    const response = JSON.parse(result.content[0].text);
+    expect(response.notice).toBeUndefined();
   });
 
-  it('ignores agentForward param when config disables it', async () => {
+  it('reuses existing shell when it already has agentForward', async () => {
     const { registerExecuteTool } = await import('../../../src/tools/execute.js');
     const { SessionKeeper } = await import('../../../src/ssh/session.js');
-
-    ctx.serverConfig.agentForward = false;
-    mockConfig.servers[0].agentForward = false;
 
     const session = new SessionKeeper(ctx.serverConfig);
     const mockClient = getMockClient(mockInstances) as MockClientType;
@@ -141,7 +156,19 @@ describe('execute - agentForward', () => {
     await connectPromise;
     ctx.pool.add(session);
 
-    mockExecute.mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
+    ShellSessionMock.mockImplementationOnce(() => ({
+      initialize: mockInitialize,
+      execute: mockExecute,
+      isReady: true,
+      destroy: mockDestroy,
+      hasAgentForward: true,
+    }));
+
+    const { ShellSession } = await import('../../../src/ssh/shell-session.js');
+    const existingShell = new ShellSession({ agentForward: true });
+    shellRegistry.set('test-server', existingShell);
+
+    mockExecute.mockResolvedValue({ stdout: 'ok', stderr: '', exitCode: 0 });
 
     const mockServer = createMockServer();
     registerExecuteTool(
@@ -153,12 +180,16 @@ describe('execute - agentForward', () => {
     );
 
     const handler = mockServer.getToolHandler('execute')!;
-    await handler({
+    const result = await handler({
       serverId: 'test-server',
-      command: 'git clone git@github.com:test/repo.git',
+      command: 'git clone',
       agentForward: true,
     });
 
-    expect(ShellSessionMock).toHaveBeenCalledWith({ agentForward: false });
+    expect(mockDestroy).not.toHaveBeenCalled();
+    expect(ShellSessionMock).toHaveBeenCalledTimes(1);
+
+    const response = JSON.parse(result.content[0].text);
+    expect(response.notice).toBeUndefined();
   });
 });

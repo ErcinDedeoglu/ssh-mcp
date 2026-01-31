@@ -39,19 +39,22 @@ describe('buildSshConnectConfig - agent forwarding', () => {
   });
 
   describe('when agentForward is not set', () => {
-    it('defaults agentForward to true', () => {
-      const config = createServerConfig({ password: 'secret' });
-      const result = buildSshConnectConfig(config, mockOptions);
-
-      expect(result.agentForward).toBe(true);
-    });
-
-    it('sets agent socket from SSH_AUTH_SOCK', () => {
+    it('enables agentForward when SSH_AUTH_SOCK is available', () => {
       process.env.SSH_AUTH_SOCK = '/tmp/ssh-agent.sock';
       const config = createServerConfig({ password: 'secret' });
       const result = buildSshConnectConfig(config, mockOptions);
 
+      expect(result.agentForward).toBe(true);
       expect(result.agent).toBe('/tmp/ssh-agent.sock');
+    });
+
+    it('disables agentForward when SSH_AUTH_SOCK is not available', () => {
+      delete process.env.SSH_AUTH_SOCK;
+      const config = createServerConfig({ password: 'secret' });
+      const result = buildSshConnectConfig(config, mockOptions);
+
+      expect(result.agentForward).toBe(false);
+      expect(result.agent).toBeUndefined();
     });
   });
 
@@ -73,26 +76,21 @@ describe('buildSshConnectConfig - agent forwarding', () => {
   });
 
   describe('when agentForward is true', () => {
-    it('sets agentForward to true', () => {
-      const config = createServerConfig({ password: 'secret' }, true);
-      const result = buildSshConnectConfig(config, mockOptions);
-
-      expect(result.agentForward).toBe(true);
-    });
-
-    it('sets agent to SSH_AUTH_SOCK when available', () => {
+    it('enables agentForward when SSH_AUTH_SOCK is available', () => {
       process.env.SSH_AUTH_SOCK = '/tmp/ssh-agent.sock';
       const config = createServerConfig({ password: 'secret' }, true);
       const result = buildSshConnectConfig(config, mockOptions);
 
+      expect(result.agentForward).toBe(true);
       expect(result.agent).toBe('/tmp/ssh-agent.sock');
     });
 
-    it('sets agent to undefined when SSH_AUTH_SOCK is not set', () => {
+    it('disables agentForward when SSH_AUTH_SOCK is not set', () => {
       delete process.env.SSH_AUTH_SOCK;
       const config = createServerConfig({ password: 'secret' }, true);
       const result = buildSshConnectConfig(config, mockOptions);
 
+      expect(result.agentForward).toBe(false);
       expect(result.agent).toBeUndefined();
     });
 
