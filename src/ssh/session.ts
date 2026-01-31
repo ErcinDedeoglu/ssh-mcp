@@ -1,4 +1,3 @@
-// SessionKeeper: manages SSH connection lifecycle with keepalive and auto-reconnection.
 import { EventEmitter } from 'node:events';
 import { Client } from 'ssh2';
 import type { ServerConfig } from '../config/types.js';
@@ -67,14 +66,11 @@ export class SessionKeeper extends EventEmitter {
     return this.options.jumpStream !== undefined;
   }
   get isIdle(): boolean {
-    if (this._lastActivity === 0) return false;
-    return Date.now() - this._lastActivity > this.options.idleTimeoutMs;
+    return this._lastActivity !== 0 && Date.now() - this._lastActivity > this.options.idleTimeoutMs;
   }
-
   touch(): void {
     this._lastActivity = Date.now();
   }
-
   healthCheck(): HealthStatus {
     const status: HealthStatus = {
       connected: this.connected,
@@ -155,6 +151,10 @@ export class SessionKeeper extends EventEmitter {
 
     this.sshClient.on('end', () => {
       this.connected = false;
+    });
+
+    this.sshClient.on('error', (err: Error) => {
+      if (!this.intentionalDisconnect) safeEmitError(this, err);
     });
   }
 
