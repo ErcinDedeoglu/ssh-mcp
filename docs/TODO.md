@@ -84,16 +84,6 @@ Commands like `apt upgrade`, `npm install`, or compilation jobs fail due to arch
 - [ ] **Streaming output** - Use MCP progress notifications to stream output chunks during execution. Lets agent see progress and detect hangs.
 - [ ] **Progress indicators** - Report percentage completion for commands that support it
 
-### Workaround (Document)
-
-Until fixed, agents should use:
-
-```bash
-# Background with manual polling
-nohup <command> > /tmp/out.log 2>&1 & echo $!
-# Check: kill -0 <PID> 2>/dev/null && echo running || cat /tmp/out.log
-```
-
 ## Security Debt (SECURITY.md claims but not implemented)
 
 - [ ] **SSH host key verification** - Prevent MITM attacks (doc says "MUST implement")
@@ -102,3 +92,47 @@ nohup <command> > /tmp/out.log 2>&1 & echo $!
 - [ ] **Pool isolation per MCP client** - Currently single pool per process
 - [ ] **Structured JSON logging** - Audit log format documented but not implemented
 - [ ] Update SECURITY.md to reflect actual implementation status
+
+---
+
+## Gap Analysis (vs. Market Expectations)
+
+_Compiled from analysis of 170+ SSH MCP implementations and 2,100+ related issues._
+
+### 🔴 Critical Security Gaps
+
+- [ ] **Command whitelisting/blacklisting** - Users expect regex-based allow/block patterns. Currently ANY command can run (`rm -rf /`, `shutdown`). Add `security.allowedCommands` / `security.blockedCommands` to config.
+- [ ] **Audit logging** - No structured logging for compliance (SOC2, ISO 27001). Add JSON audit trail: timestamp, serverId, tool, command, exitCode, commandHash.
+- [ ] **Output truncation** - Returns up to 10MB output, will crash Claude Code. Add `maxOutputLength` config (default: 10000 chars) with truncation notice.
+- [ ] **SECURITY.md missing** - README references it but file doesn't exist. Create comprehensive threat model doc.
+
+### 🟡 Usability Gaps (Medium Priority)
+
+- [ ] **cwd parameter** - Users expect `cwd` per-command without needing prior `cd`. Add optional `cwd` to execute tool.
+- [ ] **Sudo support** - Cannot run elevated commands. Add `sudo: true` parameter with optional password.
+- [ ] **Server tags/groups** - Cannot bulk-execute on multiple servers. Add `tags: ["prod", "web"]` to server config + `execute_on_tag` tool.
+- [ ] **Dry-run mode** - Cannot preview commands. Add `dryRun: true` parameter returning command preview.
+- [ ] **SSH config import** - Must duplicate `~/.ssh/config` manually. Add option to import host aliases.
+- [ ] **Health check tool** - Must parse raw `free -m`, `df -h` output. Add `health_check` tool returning structured metrics.
+- [ ] **Home path expansion bug** - `expandRemotePath()` hardcodes `/home/${username}`, breaks on macOS (`/Users/`) and non-standard homes. Query via `$HOME`.
+
+### 🟢 Nice-to-Have Gaps (Low Priority)
+
+- [ ] **Docker deployment** - No container support. Add Dockerfile + docker-compose.yml.
+- [ ] **rsync/sync tool** - Single file transfer only. Add `sync` tool for bidirectional sync.
+- [ ] **Database backup tools** - Must run manual mysqldump. Add `backup_database` tool.
+- [ ] **Process management** - Must parse `ps` output. Add `list_processes` / `kill_process` tools.
+- [ ] **Log tailing tool** - No dedicated streaming. Add `tail_logs` tool.
+- [ ] **Tool activation system** - All 13 tools always loaded. Add `enabledTools` config to reduce AI context.
+- [ ] **Windows server support** - Hardcoded Linux paths. Document limitation or add PowerShell support.
+
+### ✅ Competitive Advantages (Already Implemented)
+
+| Feature                             | Status | Competitors    |
+| ----------------------------------- | ------ | -------------- |
+| Jump host support                   | ✅     | Most lack this |
+| Persistent shell sessions           | ✅     | Unique         |
+| Background job execution            | ✅     | Unique         |
+| Real-time streaming output          | ✅     | Rare           |
+| Port forwarding (local + remote)    | ✅     | ~50% have      |
+| Connection pooling + auto-reconnect | ✅     | Standard       |
