@@ -157,5 +157,40 @@ describe('execute - basic', () => {
     });
   });
 
-  it.todo('runs command via shell and returns result - covered by E2E tests');
+  it('creates shell session and executes command via shell.execute', async () => {
+    const { registerExecuteTool } = await import('../../../src/tools/execute.js');
+    const { SessionKeeper } = await import('../../../src/ssh/session.js');
+
+    const session = new SessionKeeper(ctx.serverConfig);
+    const mockClient = getMockClient(mockInstances) as MockClientType;
+    const connectPromise = session.connect();
+    setImmediate(() => mockClient.emit('ready'));
+    await connectPromise;
+    ctx.pool.add(session);
+
+    mockInitialize.mockResolvedValue(undefined);
+    mockExecute.mockResolvedValue({ stdout: 'file1.txt\nfile2.txt', stderr: '', exitCode: 0 });
+
+    const mockServer = createMockServer();
+    registerExecuteTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+      shellRegistry,
+    );
+
+    const handler = mockServer.getToolHandler('execute')!;
+    const result = await handler({ serverId: 'test-server', command: 'ls -la' });
+
+    expect(result.isError).toBeUndefined();
+    expect(mockExecute).toHaveBeenCalledWith(
+      'ls -la',
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
+    );
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.stdout).toBe('file1.txt\nfile2.txt');
+    expect(parsed.exitCode).toBe(0);
+  });
 });

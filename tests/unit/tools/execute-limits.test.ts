@@ -10,6 +10,20 @@ import { ShellRegistry } from '../../../src/ssh/shell-registry.js';
 const mockInstances: EventEmitter[] = [];
 let mockConfig: Config;
 
+const mockInitialize = vi.fn();
+const mockExecute = vi.fn();
+const mockDestroy = vi.fn();
+
+vi.mock('../../../src/ssh/shell-session.js', () => ({
+  ShellSession: vi.fn().mockImplementation(() => ({
+    initialize: mockInitialize,
+    execute: mockExecute,
+    isReady: true,
+    destroy: mockDestroy,
+    hasAgentForward: false,
+  })),
+}));
+
 const { MockClient } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { EventEmitter: EE } = require('node:events') as typeof import('node:events');
@@ -47,9 +61,42 @@ describe('execute output limits', () => {
     ctx = createTestContext();
     mockConfig = ctx.config;
     shellRegistry = new ShellRegistry();
+    mockInitialize.mockClear();
+    mockExecute.mockClear();
+    mockDestroy.mockClear();
   });
 
-  it.todo('returns error when output exceeds MAX_OUTPUT_SIZE - covered by E2E tests');
+  it('returns error when output exceeds MAX_OUTPUT_SIZE', async () => {
+    const { registerExecuteTool } = await import('../../../src/tools/execute.js');
+    const { SessionKeeper } = await import('../../../src/ssh/session.js');
+    const { MAX_OUTPUT_SIZE } = await import('../../../src/ssh/shell-session.types.js');
+
+    const session = new SessionKeeper(ctx.serverConfig);
+    const mockClient = getMockClient(mockInstances) as MockClientType;
+    const connectPromise = session.connect();
+    setImmediate(() => mockClient.emit('ready'));
+    await connectPromise;
+    ctx.pool.add(session);
+
+    mockExecute.mockRejectedValue(new Error(`Output exceeded ${MAX_OUTPUT_SIZE} bytes limit`));
+
+    const mockServer = createMockServer();
+    registerExecuteTool(
+      mockServer as unknown as McpServer,
+      ctx.config,
+      ctx.pool,
+      ctx.forwardRegistry,
+      shellRegistry,
+    );
+
+    const handler = mockServer.getToolHandler('execute')!;
+    const result = await handler({ serverId: 'test-server', command: 'cat large-file' });
+
+    expect(result.isError).toBe(true);
+    const errorText = result.content[0].text;
+    expect(errorText).toContain('Output exceeded');
+    expect(errorText).toContain('bytes limit');
+  });
 
   it('returns connection_failed when new connection attempt fails', async () => {
     const { registerExecuteTool } = await import('../../../src/tools/execute.js');
