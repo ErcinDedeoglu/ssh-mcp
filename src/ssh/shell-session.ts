@@ -26,6 +26,7 @@ export class ShellSession {
   private currentCommand: PendingCommand | null = null;
   private commandQueue: PendingCommand[] = [];
   private readonly options: ResolvedShellOptions;
+  private readonly agentForward: boolean;
   private stallTimer: ReturnType<typeof setTimeout> | null = null;
   private timeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private outputSize = 0;
@@ -37,25 +38,26 @@ export class ShellSession {
       stallTimeoutMs:
         opts.stallTimeoutMs === undefined ? DEFAULT_STALL_TIMEOUT_MS : opts.stallTimeoutMs,
     };
+    this.agentForward = opts.agentForward ?? false;
   }
   get isReady(): boolean {
     return this.ready && this.stream !== null;
   }
   async initialize(client: Client): Promise<void> {
     if (this.stream) return;
-    this.stream = await createShellStream(client);
+    this.stream = await createShellStream(client, { agentForward: this.agentForward });
     this.setupStreamHandlers();
     await waitForInitialPrompt(this.stream, this.options.timeoutMs);
     this.stream.write(buildShellInitCommands() + '\n');
     await waitForMcpPrompt(this.stream, this.options.timeoutMs);
     this.ready = true;
   }
-  async execute(command: string, options?: ExecuteOptions | number): Promise<ShellExecuteResult> {
+  async execute(cmd: string, options?: ExecuteOptions | number): Promise<ShellExecuteResult> {
     if (!this.isReady) throw new Error('Shell session not initialized');
     const opts = typeof options === 'number' ? { timeoutMs: options } : (options ?? {});
     return new Promise((resolve, reject) => {
       const pending: PendingCommand = {
-        command,
+        command: cmd,
         marker: generateMarker(),
         timeoutMs: opts.timeoutMs ?? this.options.timeoutMs,
         stallTimeoutMs:
@@ -80,14 +82,12 @@ export class ShellSession {
     this.buffer = '';
     this.historyTracker.clear();
   }
-
   private setupStreamHandlers(): void {
     if (!this.stream) return;
     this.stream.on('data', (d: Buffer) => this.handleData(d.toString()));
     this.stream.on('close', () => this.handleClose());
     this.stream.on('error', (e: Error) => this.handleError(e));
   }
-
   private handleData(data: string): void {
     this.outputSize += data.length;
     if (this.outputSize > MAX_OUTPUT_SIZE) {

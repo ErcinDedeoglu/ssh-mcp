@@ -39,6 +39,8 @@ export function buildSshConnectConfig(
     keepaliveInterval: options.keepaliveIntervalMs,
     keepaliveCountMax: options.keepaliveCountMax,
     sock: options.jumpStream,
+    agent: (serverConfig.agentForward ?? true) ? process.env.SSH_AUTH_SOCK : undefined,
+    agentForward: serverConfig.agentForward ?? true,
   };
 
   if (isPasswordAuth(serverConfig.auth)) {

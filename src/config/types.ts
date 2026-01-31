@@ -68,6 +68,8 @@ export interface ServerConfig {
   connectionPool?: ConnectionPool;
   /** Optional human-readable description of this server */
   description?: string;
+  /** Enable SSH agent forwarding for git operations using local keys (default: false) */
+  agentForward?: boolean;
 }
 
 /**

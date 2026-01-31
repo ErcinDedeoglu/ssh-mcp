@@ -14,7 +14,7 @@
 ## Low Priority
 
 - [ ] Dynamic SOCKS proxy - Route all traffic through SSH
-- [ ] SSH agent forwarding - Git operations from remote using local keys
+- [x] SSH agent forwarding - Added `agentForward` server config option. Uses local SSH agent (`SSH_AUTH_SOCK`) for git operations on remote.
 - [x] Persistent shell sessions - Maintain cwd/env across commands (uses `client.shell()` with marker-based output parsing)
 - [x] Console history (`get_console_history`) - Retrieve previous command outputs (100 entries max, 50KB per output)
 - [x] Auto-connect - Tools automatically connect when needed, no manual `connect` required

@@ -63,6 +63,14 @@ export function registerExecuteTool(
           'Maximum output length in chars before truncation. ' +
             'Default: 10000. Prevents large outputs from overwhelming the client.',
         ),
+      agentForward: z
+        .boolean()
+        .optional()
+        .describe(
+          'Enable SSH agent forwarding for this shell session. ' +
+            'Allows using local SSH keys on remote server (e.g., for git operations). ' +
+            'Only effective when shell is first created; subsequent calls reuse existing shell.',
+        ),
     },
     async ({
       serverId,
@@ -71,6 +79,7 @@ export function registerExecuteTool(
       timeout,
       stallTimeout,
       maxOutputLength,
+      agentForward,
     }: {
       serverId: string;
       command: string;
@@ -78,6 +87,7 @@ export function registerExecuteTool(
       timeout?: number;
       stallTimeout?: number | null;
       maxOutputLength?: number;
+      agentForward?: boolean;
     }) => {
       try {
         const connectionResult = await ensureConnected(serverId, { config, pool, forwardRegistry });
@@ -87,7 +97,11 @@ export function registerExecuteTool(
 
         const { session, serverConfig } = connectionResult;
 
-        const shell = await getOrCreateShell(serverId, session.client, shellRegistry);
+        const configAllowsAgentForward = serverConfig.agentForward ?? true;
+        const effectiveAgentForward = configAllowsAgentForward && (agentForward ?? false);
+        const shell = await getOrCreateShell(serverId, session.client, shellRegistry, {
+          agentForward: effectiveAgentForward,
+        });
         const timeoutMs = resolveTimeoutMs(timeout, serverConfig, config);
         const stallTimeoutMs = resolveStallTimeoutMs(stallTimeout);
 
@@ -122,15 +136,20 @@ export function registerExecuteTool(
   );
 }
 
+interface GetOrCreateShellOptions {
+  agentForward?: boolean;
+}
+
 async function getOrCreateShell(
   serverId: string,
   client: Parameters<ShellSession['initialize']>[0],
   registry: ShellRegistry,
+  options: GetOrCreateShellOptions = {},
 ): Promise<ShellSession> {
   let shell = registry.get(serverId);
   if (shell?.isReady) return shell;
 
-  shell = new ShellSession();
+  shell = new ShellSession({ agentForward: options.agentForward });
   await shell.initialize(client);
   registry.set(serverId, shell);
   return shell;

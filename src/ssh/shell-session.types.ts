@@ -44,9 +44,10 @@ export interface ExecuteOptions {
 export interface ShellSessionOptions {
   timeoutMs?: number;
   stallTimeoutMs?: number | null; // null = disabled
+  agentForward?: boolean;
 }
 
-export type ResolvedShellOptions = Required<ShellSessionOptions>;
+export type ResolvedShellOptions = Required<Omit<ShellSessionOptions, 'agentForward'>>;
 
 export type ShellStream = ClientChannel & {
   stderr: NodeJS.ReadableStream;

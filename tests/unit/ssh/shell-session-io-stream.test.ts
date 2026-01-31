@@ -23,7 +23,7 @@ describe('createShellStream', () => {
   it('resolves with stream on success', async () => {
     const mockStream = new EventEmitter() as ShellStream;
     const mockClient = {
-      shell: vi.fn((_opts, callback) => {
+      shell: vi.fn((_ptyOpts, _shellOpts, callback) => {
         callback(null, mockStream);
       }),
     } as unknown as Client;
@@ -31,18 +31,39 @@ describe('createShellStream', () => {
     const result = await createShellStream(mockClient);
 
     expect(result).toBe(mockStream);
-    expect(mockClient.shell).toHaveBeenCalledWith({ term: 'dumb' }, expect.any(Function));
+    expect(mockClient.shell).toHaveBeenCalledWith(
+      { term: 'dumb' },
+      { agentForward: false },
+      expect.any(Function),
+    );
   });
 
   it('rejects with error on failure', async () => {
     const mockError = new Error('Shell creation failed');
     const mockClient = {
-      shell: vi.fn((_opts, callback) => {
+      shell: vi.fn((_ptyOpts, _shellOpts, callback) => {
         callback(mockError, null);
       }),
     } as unknown as Client;
 
     await expect(createShellStream(mockClient)).rejects.toThrow('Shell creation failed');
+  });
+
+  it('passes agentForward option to shell', async () => {
+    const mockStream = new EventEmitter() as ShellStream;
+    const mockClient = {
+      shell: vi.fn((_ptyOpts, _shellOpts, callback) => {
+        callback(null, mockStream);
+      }),
+    } as unknown as Client;
+
+    await createShellStream(mockClient, { agentForward: true });
+
+    expect(mockClient.shell).toHaveBeenCalledWith(
+      { term: 'dumb' },
+      { agentForward: true },
+      expect.any(Function),
+    );
   });
 });
 

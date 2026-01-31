@@ -123,6 +123,11 @@
           "type": "string",
           "description": "Optional human-readable description of this server",
           "examples": ["Production web server", "Development database"]
+        },
+        "agentForward": {
+          "type": "boolean",
+          "description": "Allow SSH agent forwarding capability. When true (default), the execute tool can enable agent forwarding per-request.",
+          "default": true
         }
       },
       "additionalProperties": false

@@ -68,7 +68,8 @@ Priority: CLI arg > env var > default. The `~` expands to home directory on all 
       "auth": {
         "privateKey": "~/.ssh/id_rsa"
       },
-      "description": "Dev database (key from file)"
+      "agentForward": true,
+      "description": "Dev database (key from file, agent forwarding enabled)"
     }
   ],
   "defaults": {
@@ -92,6 +93,39 @@ The `privateKey` field auto-detects format:
 | File path  | Everything else                  | `"~/.ssh/id_rsa"`                            |
 
 Use the `keys` section to define a key once and reference it by alias across multiple servers.
+
+### SSH Agent Forwarding
+
+Agent forwarding lets you use your local SSH keys on remote servers (e.g., for git with private repos).
+
+**Two-level control:**
+
+| Config `agentForward` | Tool `agentForward` | Result             |
+| --------------------- | ------------------- | ------------------ |
+| `true` (default)      | `true`              | Enabled            |
+| `true` (default)      | `false`/omitted     | Disabled           |
+| `false`               | any                 | Disabled (blocked) |
+
+- **Config level**: Permission gate. Set `false` to block agent forwarding entirely for a server.
+- **Tool level**: Request flag. Pass `true` to enable for that command.
+
+```json
+{
+  "id": "restricted-server",
+  "host": "prod.example.com",
+  "username": "admin",
+  "auth": { "privateKey": "~/.ssh/id_rsa" },
+  "agentForward": false
+}
+```
+
+```
+execute(serverId, "git clone git@github.com:private/repo.git", { agentForward: true })
+```
+
+**Note:** Agent forwarding is set when the shell session starts. To change it, disconnect first.
+
+**Requirements:** SSH agent running with keys loaded (`ssh-add -l` to verify). The `SSH_AUTH_SOCK` environment variable must be set.
 
 **Important:** Set file permissions to 0600:
 
@@ -180,8 +214,9 @@ Restart the MCP client after configuration.
 **The core tool.** Runs any shell command on the remote server using a persistent shell session. Automatically connects if not already connected.
 
 ```
-Parameters: serverId, command, stdin (optional), timeout (optional), stallTimeout (optional)
-Returns: stdout, stderr, exitCode
+Parameters: serverId, command, stdin (optional), timeout (optional), stallTimeout (optional),
+            maxOutputLength (optional), agentForward (optional)
+Returns: stdout, stderr, exitCode, truncated
 ```
 
 **Auto-connect:** Just call `execute` - the server connects automatically on first use. No need to call `connect` first.
@@ -222,6 +257,14 @@ execute(serverId, "npm install", { stallTimeout: 0 })
 ```
 execute(serverId, "cat large-file.log", { maxOutputLength: 50000 })
 ```
+
+**Agent forwarding:** Pass `agentForward: true` to use your local SSH agent keys on the remote server:
+
+```
+execute(serverId, "git clone git@github.com:private/repo.git", { agentForward: true })
+```
+
+See [SSH Agent Forwarding](#ssh-agent-forwarding) for the two-level control system. Note: agent forwarding is set when the shell session starts - disconnect first to change it.
 
 ### execute_background / check_job / cancel_job
 

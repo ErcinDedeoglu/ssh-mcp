@@ -1,9 +1,18 @@
 import type { Client } from 'ssh2';
 import { MCP_PROMPT, type ShellStream } from './shell-session.types.js';
 
-export function createShellStream(client: Client): Promise<ShellStream> {
+export interface CreateShellStreamOptions {
+  agentForward?: boolean;
+}
+
+export function createShellStream(
+  client: Client,
+  options: CreateShellStreamOptions = {},
+): Promise<ShellStream> {
   return new Promise((resolve, reject) => {
-    client.shell({ term: 'dumb' }, (err, stream) => {
+    // ssh2 supports agentForward in shell options but types are incomplete
+    const shellOptions = { agentForward: options.agentForward ?? false } as Record<string, unknown>;
+    client.shell({ term: 'dumb' }, shellOptions, (err, stream) => {
       if (err) reject(err);
       else resolve(stream as ShellStream);
     });
