@@ -44,6 +44,20 @@ describe('shell-session helper functions', () => {
       const input = 'line1\r\nline2';
       expect(stripControlSequences(input)).toBe('line1\r\nline2');
     });
+
+    it('strips bracketed paste mode sequences', () => {
+      const input = 'prompt% \x1B[?2004h';
+      expect(stripControlSequences(input)).toBe('prompt% ');
+    });
+
+    it('strips zsh PROMPT_SP preamble with bracketed paste', () => {
+      // Real zsh output: PROMPT_SP bold/reverse %, spaces, CR sequences, then actual prompt
+      const input =
+        '\x1B[1m\x1B[7m%\x1B[27m\x1B[1m\x1B[0m   \r \r\r' +
+        '\x1B[0m\x1B[27m\x1B[24m\x1B[J' +
+        'user@host ~ % \x1B[K\x1B[?2004h';
+      expect(stripControlSequences(input)).toBe('%    user@host ~ % ');
+    });
   });
 
   describe('buildShellInitCommands', () => {

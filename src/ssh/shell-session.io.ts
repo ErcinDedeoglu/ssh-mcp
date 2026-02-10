@@ -1,5 +1,5 @@
 import type { Client } from 'ssh2';
-import { MCP_PROMPT, type ShellStream } from './shell-session.types.js';
+import { MCP_PROMPT, stripControlSequences, type ShellStream } from './shell-session.types.js';
 
 export interface CreateShellStreamOptions {
   agentForward?: boolean;
@@ -33,7 +33,7 @@ export function waitForPattern(
 
     const onData = (data: Buffer): void => {
       buffer += data.toString();
-      if (pattern.test(buffer)) {
+      if (pattern.test(stripControlSequences(buffer))) {
         cleanup();
         resolve();
       }
@@ -49,7 +49,7 @@ export function waitForPattern(
 }
 
 export function waitForInitialPrompt(stream: ShellStream, timeoutMs: number): Promise<void> {
-  return waitForPattern(stream, /[$#>]\s*$/, timeoutMs);
+  return waitForPattern(stream, /[$#>%]\s*$/, timeoutMs);
 }
 
 export function waitForMcpPrompt(stream: ShellStream, timeoutMs: number): Promise<void> {

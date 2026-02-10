@@ -55,6 +55,37 @@ describe('waitForInitialPrompt', () => {
 
     await expect(promise).resolves.toBeUndefined();
   });
+
+  it('waits for zsh % prompt', async () => {
+    const promise = waitForInitialPrompt(mockStream, 5000);
+
+    mockStream.emit('data', Buffer.from('user@host ~ % '));
+
+    await expect(promise).resolves.toBeUndefined();
+  });
+
+  it('matches zsh prompt wrapped in ANSI escape sequences', async () => {
+    const promise = waitForInitialPrompt(mockStream, 5000);
+
+    mockStream.emit('data', Buffer.from('user@host ~ % \x1B[K\x1B[?2004h'));
+
+    await expect(promise).resolves.toBeUndefined();
+  });
+
+  it('matches zsh prompt with full PROMPT_SP preamble', async () => {
+    const promise = waitForInitialPrompt(mockStream, 5000);
+
+    // Exact bytes from macOS zsh: PROMPT_SP preamble + actual prompt + bracketed paste
+    const zshOutput =
+      '\x1B[1m\x1B[7m%\x1B[27m\x1B[1m\x1B[0m' +
+      '                                            ' +
+      '\r \r\r' +
+      '\x1B[0m\x1B[27m\x1B[24m\x1B[J' +
+      'ercin.dedeoglu@sbs-ercin ~ % \x1B[K\x1B[?2004h';
+    mockStream.emit('data', Buffer.from(zshOutput));
+
+    await expect(promise).resolves.toBeUndefined();
+  });
 });
 
 describe('waitForMcpPrompt', () => {

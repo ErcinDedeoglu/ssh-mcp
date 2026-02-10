@@ -61,7 +61,7 @@ export function generateMarker(): string {
 
 export function stripControlSequences(str: string): string {
   return str
-    .replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '') // ANSI escape sequences
+    .replace(/\x1B\[[0-9;?]*[a-zA-Z]/g, '') // ANSI escape sequences (including private modes like \e[?2004h)
     .replace(/\x1B][^\x07]*\x07/g, '') // OSC sequences
     .replace(/\r(?!\n)/g, ''); // Carriage returns not followed by newline
 }
