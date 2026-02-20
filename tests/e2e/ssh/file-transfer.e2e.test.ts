@@ -81,11 +81,10 @@ describe.skipIf(!isDockerRunning())('E2E SSH File Transfer Tests', () => {
       await session.connect();
       const fileTransfer = new FileTransfer(session);
       const homeDir = (await executeCommand(session.client, 'echo $HOME')).stdout.trim();
-      const remotePath = `${homeDir}/test-file.txt`;
-      await fileTransfer.upload(localTestFile, remotePath);
-      const result = await executeCommand(session.client, `cat ${remotePath}`);
+      await fileTransfer.upload(localTestFile, '~/test-file.txt');
+      const result = await executeCommand(session.client, `cat ${homeDir}/test-file.txt`);
       expect(result.stdout).toBe(testContent);
-      await executeCommand(session.client, `rm ${remotePath}`);
+      await executeCommand(session.client, `rm ${homeDir}/test-file.txt`);
       session.disconnect();
     });
   });
