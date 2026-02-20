@@ -49,6 +49,18 @@ export interface PrivateKeyAuth {
 export type Auth = PasswordAuth | PrivateKeyAuth;
 
 /**
+ * Remote shell type for prompt detection and command wrapping.
+ * - "auto": auto-detect from initial prompt (default)
+ * - "posix": bash/sh/zsh
+ * - "powershell": Windows PowerShell or PowerShell Core
+ * - "cmd": Windows cmd.exe
+ */
+export type ShellType = 'auto' | 'posix' | 'powershell' | 'cmd';
+
+/** Concrete shell types after auto-detection has resolved. */
+export type ConcreteShellType = 'posix' | 'powershell' | 'cmd';
+
+/**
  * SSH server connection configuration
  */
 export interface ServerConfig {
@@ -62,6 +74,8 @@ export interface ServerConfig {
   username: string;
   /** Authentication method */
   auth: Auth;
+  /** Remote shell type: "auto" (default, auto-detect), "posix", "powershell", or "cmd" */
+  shell?: ShellType;
   /** Server-specific timeout settings */
   timeouts?: Timeouts;
   /** Server-specific connection pool settings */

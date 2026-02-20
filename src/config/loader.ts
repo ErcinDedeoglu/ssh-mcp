@@ -1,32 +1,11 @@
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import type { Config } from './types.js';
+import { getConfigPath } from './path.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-function expandHome(filePath: string): string {
-  if (filePath.startsWith('~')) {
-    return path.join(os.homedir(), filePath.slice(1));
-  }
-  return filePath;
-}
-
-function getConfigPath(): string {
-  // Priority: CLI arg > env var > default
-  const cliIndex = process.argv.indexOf('--config');
-  if (cliIndex !== -1 && process.argv[cliIndex + 1]) {
-    return expandHome(process.argv[cliIndex + 1]);
-  }
-
-  if (process.env.SSH_MCP_CONFIG) {
-    return expandHome(process.env.SSH_MCP_CONFIG);
-  }
-
-  return path.join(os.homedir(), '.ssh-mcp', 'config.json');
-}
 
 function getSchemaPath(): string {
   return path.resolve(__dirname, '../../config.schema.json');

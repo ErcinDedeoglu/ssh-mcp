@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { Config } from '../config/types.js';
+import type { Config, ShellType, ConcreteShellType, ServerConfig } from '../config/types.js';
+import { persistShellType } from '../config/writer.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { ShellRegistry } from '../ssh/shell-registry.js';
@@ -59,7 +60,13 @@ export function registerExecuteBackgroundTool(
         }
 
         const { session, serverConfig } = connectionResult;
-        const shell = await getOrCreateShell(serverId, session.client, shellRegistry);
+        const shell = await getOrCreateShell(
+          serverId,
+          session.client,
+          shellRegistry,
+          serverConfig.shell,
+          serverConfig,
+        );
 
         const job = jobRegistry.create(serverId, command);
         jobRegistry.updateStatus(job.id, 'running');
@@ -104,13 +111,23 @@ async function getOrCreateShell(
   serverId: string,
   client: Parameters<ShellSession['initialize']>[0],
   registry: ShellRegistry,
+  shellType?: ShellType,
+  serverConfig?: ServerConfig,
 ): Promise<ShellSession> {
   let shell = registry.get(serverId);
   if (shell?.isReady) return shell;
 
-  shell = new ShellSession();
+  const wasAuto = !shellType || shellType === 'auto';
+  shell = new ShellSession({ shellType });
   await shell.initialize(client);
   registry.set(serverId, shell);
+
+  if (wasAuto && shell.shellType !== 'auto') {
+    const detected = shell.shellType as ConcreteShellType;
+    if (serverConfig) serverConfig.shell = detected;
+    persistShellType(serverId, detected);
+  }
+
   return shell;
 }
 

@@ -58,6 +58,7 @@ describe('upload', () => {
     ctx.pool.add(session);
 
     const mockSftp = {
+      realpath: vi.fn((_p: string, cb: ErrorCallback) => cb(null, '/home/testuser')),
       fastPut: vi.fn((_local: string, _remote: string, callback: ErrorCallback) => {
         callback(null);
       }),

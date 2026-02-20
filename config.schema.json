@@ -124,6 +124,12 @@
           "description": "Optional human-readable description of this server",
           "examples": ["Production web server", "Development database"]
         },
+        "shell": {
+          "type": "string",
+          "description": "Remote shell type. 'auto' (default) detects the shell from the initial prompt. Use 'powershell' for Windows PowerShell, 'cmd' for Windows cmd.exe, or 'posix' for bash/sh/zsh to skip auto-detection.",
+          "enum": ["auto", "posix", "powershell", "cmd"],
+          "default": "auto"
+        },
         "agentForward": {
           "type": "boolean",
           "description": "Allow SSH agent forwarding capability. When true (default), the execute tool can enable agent forwarding per-request.",

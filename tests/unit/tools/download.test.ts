@@ -58,6 +58,7 @@ describe('download', () => {
     ctx.pool.add(session);
 
     const mockSftp = {
+      realpath: vi.fn((_p: string, cb: ErrorCallback) => cb(null, '/home/testuser')),
       stat: vi.fn((_path: string, callback: ErrorCallback) => {
         callback(null, { size: 1024 });
       }),
@@ -100,6 +101,7 @@ describe('download', () => {
     ctx.pool.add(session);
 
     const mockSftp = {
+      realpath: vi.fn((_p: string, cb: ErrorCallback) => cb(null, '/home/testuser')),
       stat: vi.fn((_path: string, callback: ErrorCallback) => {
         callback(null, { size: 200 * 1024 * 1024 });
       }),

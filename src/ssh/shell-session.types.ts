@@ -1,5 +1,6 @@
 // ShellSession types, constants, and pure utility functions.
 import type { ClientChannel } from 'ssh2';
+import type { ShellAdapter } from './shell-adapter.js';
 
 export const MCP_PROMPT = '__MCP_PROMPT__';
 export const MCP_PROMPT_CONTINUATION = '__MCP_PROMPT2__';
@@ -8,6 +9,7 @@ export const DEFAULT_STALL_TIMEOUT_MS = 10000;
 export const MAX_OUTPUT_SIZE = 10 * 1024 * 1024;
 export const MAX_HISTORY_ENTRIES = 100;
 export const MAX_HISTORY_OUTPUT_LENGTH = 50 * 1024;
+export const STDIN_DELIVERY_DELAY_MS = 100;
 
 export interface ShellExecuteResult {
   stdout: string;
@@ -45,9 +47,12 @@ export interface ShellSessionOptions {
   timeoutMs?: number;
   stallTimeoutMs?: number | null; // null = disabled
   agentForward?: boolean;
+  shellType?: 'auto' | 'posix' | 'powershell' | 'cmd';
 }
 
-export type ResolvedShellOptions = Required<Omit<ShellSessionOptions, 'agentForward'>>;
+export type ResolvedShellOptions = Required<
+  Omit<ShellSessionOptions, 'agentForward' | 'shellType'>
+>;
 
 export type ShellStream = ClientChannel & {
   stderr: NodeJS.ReadableStream;
@@ -66,28 +71,6 @@ export function stripControlSequences(str: string): string {
     .replace(/\r(?!\n)/g, ''); // Carriage returns not followed by newline
 }
 
-export function buildShellInitCommands(): string {
-  return [
-    `export PS1="${MCP_PROMPT}"`,
-    `export PS2="${MCP_PROMPT_CONTINUATION}"`,
-    'export TERM=dumb',
-    'export DEBIAN_FRONTEND=noninteractive',
-    'unset HISTFILE',
-    'stty -echo 2>/dev/null || true',
-  ].join('; ');
-}
-
-export function wrapCommand(command: string, marker: string): string {
-  return `${command}; __MCP_EXIT=$?; echo ""; echo "${marker}"; echo $__MCP_EXIT\n`;
-}
-
-function isEchoedCommandLine(line: string, marker: string): boolean {
-  const hasExitCapture = line.includes('__MCP_EXIT') || line.includes('$__MCP_EXIT');
-  const hasMarkerEcho = line.includes(`echo "${marker}"`) || line.includes(`"${marker}"`);
-  const hasEchoPattern = line.includes('echo ""') && hasExitCapture;
-  return hasExitCapture || hasMarkerEcho || hasEchoPattern;
-}
-
 function findStandaloneMarker(buffer: string, marker: string): number {
   const markerLinePattern = new RegExp(`(^|\\n)${marker}(\\r?\\n|$)`);
   const match = buffer.match(markerLinePattern);
@@ -98,6 +81,7 @@ function findStandaloneMarker(buffer: string, marker: string): number {
 export function parseMarkedOutput(
   buffer: string,
   marker: string,
+  adapter: ShellAdapter,
 ): { output: string; exitCode: number; remaining: string } | null {
   const markerIndex = findStandaloneMarker(buffer, marker);
   if (markerIndex === -1) return null;
@@ -111,7 +95,7 @@ export function parseMarkedOutput(
 
   const cleaned = stripControlSequences(beforeMarker);
   const lines = cleaned.split('\n');
-  const outputLines = lines.filter((line) => !isEchoedCommandLine(line, marker));
+  const outputLines = lines.filter((line) => !adapter.isEchoedCommandLine(line, marker));
   // Strip leading prompt that appears from the previous command
   let output = outputLines.join('\n').trim();
   if (output.startsWith(MCP_PROMPT)) {

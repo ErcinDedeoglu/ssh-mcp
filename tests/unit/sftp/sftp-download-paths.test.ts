@@ -49,7 +49,7 @@ describe('FileTransfer download path handling', () => {
     vi.restoreAllMocks();
   });
 
-  it('expands ~ in remote paths', async () => {
+  it('expands ~ in remote paths via sftp realpath', async () => {
     const { connection, mockClient } = await setupConnectedClient(
       serverConfig,
       mockClientInstances,
@@ -61,6 +61,11 @@ describe('FileTransfer download path handling', () => {
     mockClient.sftp.mockImplementation(
       (callback: (err: Error | null, sftp: MockSFTPWrapper) => void) => {
         const sftpWrapper = new MockSFTPWrapper();
+        sftpWrapper.realpath.mockImplementation(
+          (_p: string, cb: (err: Error | null, abs: string) => void) => {
+            setImmediate(() => cb(null, '/home/testuser'));
+          },
+        );
         sftpWrapper.stat.mockImplementation(
           (_path: string, cb: (err: Error | null, stats: { size: number } | null) => void) => {
             capturedRemotePath = _path;

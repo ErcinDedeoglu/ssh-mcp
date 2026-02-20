@@ -8,23 +8,27 @@ SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool 
 
 ## Structure
 
-| File                           | Purpose                                                           |
-| ------------------------------ | ----------------------------------------------------------------- |
-| `session.ts`                   | SessionKeeper: EventEmitter-based connection with auto-reconnect  |
-| `session.types.ts`             | Types, constants, pure functions (calculateReconnectDelay, etc.)  |
-| `session-connect-config.io.ts` | buildSshConnectConfig(): auth config builder for ssh2             |
-| `pool.ts`                      | ConnectionPool: Map registry with auto-removal on max-retries     |
-| `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, recursive mkdir   |
-| `forward-registry.ts`          | ForwardRegistry: tracks active local port forwards                |
-| `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring       |
-| `remote-forward.ts`            | createRemoteForward(): ssh2 forwardIn() wiring                    |
-| `remote-forward-registry.ts`   | RemoteForwardRegistry: tracks remote port forwards                |
-| `shell-session.ts`             | ShellSession: persistent shell with marker-based command exec     |
-| `shell-session.types.ts`       | Types, constants, marker generation, output parsing functions     |
-| `shell-session.io.ts`          | Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt) |
-| `shell-registry.ts`            | ShellRegistry: Map of serverId → ShellSession                     |
-| `jump-stream.ts`               | createJumpStream(): nested SSH connections through bastion        |
-| `connection.ts`                | **DEAD CODE** - never use, kept for reference only                |
+| File                           | Purpose                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| `session.ts`                   | SessionKeeper: EventEmitter-based connection with auto-reconnect        |
+| `session.types.ts`             | Types, constants, pure functions (calculateReconnectDelay, etc.)        |
+| `session-connect-config.io.ts` | buildSshConnectConfig(): auth config builder for ssh2                   |
+| `pool.ts`                      | ConnectionPool: Map registry with auto-removal on max-retries           |
+| `sftp.ts`                      | FileTransfer: upload/download with 100MB limit, cross-platform ~ paths  |
+| `shell-adapter.ts`             | ShellAdapter interface, createShellAdapter() factory, detectShellType() |
+| `shell-adapter-posix.ts`       | PosixShellAdapter: bash/sh/zsh command wrapping and init                |
+| `shell-adapter-powershell.ts`  | PowerShellAdapter: PowerShell command wrapping and init                 |
+| `shell-adapter-cmd.ts`         | CmdShellAdapter: cmd.exe command wrapping and init                      |
+| `shell-session.ts`             | ShellSession: persistent shell with marker-based command exec           |
+| `shell-session.types.ts`       | Types, constants, marker generation, output parsing functions           |
+| `shell-session.io.ts`          | Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt)       |
+| `shell-registry.ts`            | ShellRegistry: Map of serverId → ShellSession                           |
+| `forward-registry.ts`          | ForwardRegistry: tracks active local port forwards                      |
+| `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring             |
+| `remote-forward.ts`            | createRemoteForward(): ssh2 forwardIn() wiring                          |
+| `remote-forward-registry.ts`   | RemoteForwardRegistry: tracks remote port forwards                      |
+| `jump-stream.ts`               | createJumpStream(): nested SSH connections through bastion              |
+| `connection.ts`                | **DEAD CODE** - never use, kept for reference only                      |
 
 ## SessionKeeper State Machine
 
@@ -65,6 +69,7 @@ DISCONNECTED → connect() → CONNECTED
 | `DEFAULT_SHELL_TIMEOUT_MS`        | 30000             | shell-session.types.ts |
 | `DEFAULT_STALL_TIMEOUT_MS`        | 10000             | shell-session.types.ts |
 | `MAX_OUTPUT_SIZE`                 | 10485760 (10MB)   | shell-session.types.ts |
+| `STDIN_DELIVERY_DELAY_MS`         | 100               | shell-session.types.ts |
 
 ## Where to Look
 
@@ -73,9 +78,11 @@ DISCONNECTED → connect() → CONNECTED
 | Change reconnection timing    | `session.types.ts` calculateReconnectDelay()           |
 | Add connection event          | `session.types.ts` SessionKeeperEvents interface       |
 | Change file size limit        | `sftp.ts` MAX_FILE_SIZE constant                       |
-| Fix path expansion for macOS  | `sftp.ts` expandRemotePath()                           |
+| Change home dir expansion     | `sftp.ts` expandRemotePath(), resolveHomeDir()         |
 | Change pool behavior          | `pool.ts` - simple Map, add/remove/clear               |
 | Modify auth config building   | `session-connect-config.io.ts` buildSshConnectConfig() |
+| Add shell type adapter        | `shell-adapter*.ts` - interface + per-shell impls      |
+| Change shell auto-detection   | `shell-adapter.ts` detectShellType()                   |
 | Change local port forward     | `local-forward.ts` createLocalForward()                |
 | Change remote port forward    | `remote-forward.ts` createRemoteForward()              |
 | Modify local forward tracking | `forward-registry.ts` ForwardRegistry class            |
@@ -85,6 +92,24 @@ DISCONNECTED → connect() → CONNECTED
 | Modify shell output parsing   | `shell-session.types.ts` parseMarkedOutput()           |
 | Change shell initialization   | `shell-session.io.ts` waitForInitialPrompt()           |
 | Modify jump host behavior     | `jump-stream.ts` createJumpStream()                    |
+
+## Shell Adapter Architecture
+
+Shell adapters abstract command wrapping and initialization across shell types:
+
+- `ShellAdapter` interface (`shell-adapter.ts`): `wrapCommand()`, `getInitCommands()`, `eofChar`, `parseExitCode()`
+- Factory: `createShellAdapter(shellType)` returns the concrete adapter
+- Detection: `detectShellType(promptText)` analyzes last line of initial prompt
+
+**Auto-detection flow** (when `shellType` is `'auto'`, the default):
+
+1. `ShellSession.initialize()` connects and waits for initial prompt
+2. `waitForInitialPrompt()` returns the prompt text
+3. `detectShellType()` matches against known patterns (PS prompt, drive-letter prompt, etc.)
+4. Concrete adapter is created and used for all subsequent commands
+5. Detected type is persisted to config via `persistShellType()` (best-effort)
+
+**Stdin delivery**: Commands with `stdin` use a 100ms delay (`STDIN_DELIVERY_DELAY_MS`) between writing the wrapped command and delivering stdin+EOF, to ensure the target process is ready.
 
 ## Anti-Patterns
 

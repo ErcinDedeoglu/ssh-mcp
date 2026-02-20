@@ -32,14 +32,23 @@ export class FileTransfer {
     });
   }
 
-  private expandRemotePath(remotePath: string): string {
-    if (remotePath.startsWith('~/')) {
-      return `/home/${this.connection.username}/${remotePath.slice(2)}`;
-    }
-    if (remotePath === '~') {
-      return `/home/${this.connection.username}`;
-    }
-    return remotePath;
+  private async expandRemotePath(remotePath: string, sftp: SFTPWrapper): Promise<string> {
+    if (remotePath !== '~' && !remotePath.startsWith('~/')) return remotePath;
+    const suffix = remotePath === '~' ? '' : remotePath.slice(2);
+    const homeDir = await this.resolveHomeDir(sftp);
+    return suffix ? `${homeDir}/${suffix}` : homeDir;
+  }
+
+  private resolveHomeDir(sftp: SFTPWrapper): Promise<string> {
+    return new Promise<string>((resolve) => {
+      sftp.realpath('.', (err, absPath) => {
+        if (err || !absPath) {
+          resolve(`/home/${this.connection.username}`);
+          return;
+        }
+        resolve(absPath);
+      });
+    });
   }
 
   private getSftp(): Promise<SFTPWrapper> {
@@ -107,8 +116,8 @@ export class FileTransfer {
       throw new Error(`File too large: ${stats.size} bytes exceeds ${MAX_FILE_SIZE} byte limit`);
     }
 
-    const expandedRemotePath = this.expandRemotePath(remotePath);
     const sftp = await this.getSftp();
+    const expandedRemotePath = await this.expandRemotePath(remotePath, sftp);
 
     const doUpload = (): Promise<void> => {
       return new Promise((resolve, reject) => {
@@ -148,8 +157,8 @@ export class FileTransfer {
   }
 
   async download(remotePath: string, localPath: string): Promise<void> {
-    const expandedRemotePath = this.expandRemotePath(remotePath);
     const sftp = await this.getSftp();
+    const expandedRemotePath = await this.expandRemotePath(remotePath, sftp);
 
     const remoteStats = await new Promise<{ size: number }>((resolve, reject) => {
       sftp.stat(expandedRemotePath, (err, stats) => {

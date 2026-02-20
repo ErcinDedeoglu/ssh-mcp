@@ -80,7 +80,7 @@ describe('waitForPattern', () => {
 
     mockStream.emit('data', Buffer.from('user@host:~$ '));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('user@host:~$ ');
   });
 
   it('resolves when pattern matches after multiple data events', async () => {
@@ -91,7 +91,7 @@ describe('waitForPattern', () => {
     mockStream.emit('data', Buffer.from('\n'));
     mockStream.emit('data', Buffer.from('complete'));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('processing...\ncomplete');
   });
 
   it('accumulates buffer across multiple data events', async () => {
@@ -101,7 +101,7 @@ describe('waitForPattern', () => {
     mockStream.emit('data', Buffer.from('hello '));
     mockStream.emit('data', Buffer.from('world'));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('hello world');
   });
 
   it('rejects on timeout', async () => {
@@ -159,7 +159,7 @@ describe('waitForPattern', () => {
     mockStream.emit('data', Buffer.from(''));
     mockStream.emit('data', Buffer.from('test'));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('test');
   });
 
   it('handles binary data correctly', async () => {
@@ -168,6 +168,6 @@ describe('waitForPattern', () => {
 
     mockStream.emit('data', Buffer.from('test\u00FF\u00FE'));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toContain('test');
   });
 });

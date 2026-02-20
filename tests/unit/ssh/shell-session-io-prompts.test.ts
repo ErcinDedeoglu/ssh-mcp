@@ -15,7 +15,7 @@ describe('waitForInitialPrompt', () => {
 
     mockStream.emit('data', Buffer.from('user@host:~$ '));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('user@host:~$ ');
   });
 
   it('waits for # prompt (root)', async () => {
@@ -23,7 +23,7 @@ describe('waitForInitialPrompt', () => {
 
     mockStream.emit('data', Buffer.from('root@host:~# '));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('root@host:~# ');
   });
 
   it('waits for > prompt', async () => {
@@ -31,7 +31,7 @@ describe('waitForInitialPrompt', () => {
 
     mockStream.emit('data', Buffer.from('C:\\Users\\test> '));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('C:\\Users\\test> ');
   });
 
   it('rejects on timeout', async () => {
@@ -53,7 +53,7 @@ describe('waitForInitialPrompt', () => {
 
     mockStream.emit('data', Buffer.from('user@host:~$   \n'));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toContain('user@host:~$');
   });
 
   it('waits for zsh % prompt', async () => {
@@ -61,7 +61,7 @@ describe('waitForInitialPrompt', () => {
 
     mockStream.emit('data', Buffer.from('user@host ~ % '));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('user@host ~ % ');
   });
 
   it('matches zsh prompt wrapped in ANSI escape sequences', async () => {
@@ -69,7 +69,7 @@ describe('waitForInitialPrompt', () => {
 
     mockStream.emit('data', Buffer.from('user@host ~ % \x1B[K\x1B[?2004h'));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toBe('user@host ~ % ');
   });
 
   it('matches zsh prompt with full PROMPT_SP preamble', async () => {
@@ -84,7 +84,7 @@ describe('waitForInitialPrompt', () => {
       'ercin.dedeoglu@sbs-ercin ~ % \x1B[K\x1B[?2004h';
     mockStream.emit('data', Buffer.from(zshOutput));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toContain('ercin.dedeoglu@sbs-ercin ~ % ');
   });
 });
 
@@ -100,7 +100,7 @@ describe('waitForMcpPrompt', () => {
 
     mockStream.emit('data', Buffer.from(`${MCP_PROMPT} `));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toContain(MCP_PROMPT);
   });
 
   it('waits for MCP_PROMPT with trailing whitespace', async () => {
@@ -108,7 +108,7 @@ describe('waitForMcpPrompt', () => {
 
     mockStream.emit('data', Buffer.from(`${MCP_PROMPT}  \n`));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toContain(MCP_PROMPT);
   });
 
   it('rejects on timeout', async () => {
@@ -131,7 +131,7 @@ describe('waitForMcpPrompt', () => {
     mockStream.emit('data', Buffer.from('some output\n'));
     mockStream.emit('data', Buffer.from(`${MCP_PROMPT} `));
 
-    await expect(promise).resolves.toBeUndefined();
+    await expect(promise).resolves.toContain(MCP_PROMPT);
   });
 
   it('does not match partial MCP_PROMPT', async () => {

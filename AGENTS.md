@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Generated: 2026-01-30 | Commit: 8653dd2 | Branch: master -->
+<!-- Generated: 2026-02-20 | Branch: v1.0 -->
 
 ## Overview
 
@@ -14,22 +14,28 @@ src/
 ├── server.ts         # SSHMCPServer class: wires McpServer + ConnectionPool + tools
 ├── config/
 │   ├── loader.ts     # loadConfig(): JSON Schema validation via AJV, 0600 permission check
-│   └── types.ts      # Config, ServerConfig, auth type guards
+│   ├── path.ts       # getConfigPath(), expandHome() - shared config path utilities
+│   ├── writer.ts     # persistShellType(): writes auto-detected shell type back to config
+│   └── types.ts      # Config, ServerConfig, ShellType, ConcreteShellType, auth type guards
 ├── ssh/              # See src/ssh/AGENTS.md
 │   ├── session.ts              # SessionKeeper: EventEmitter wrapping ssh2 Client, auto-reconnect
 │   ├── session.types.ts        # Types, constants, pure functions (calculateReconnectDelay, safeEmitError)
 │   ├── session-connect-config.io.ts  # buildSshConnectConfig() - auth config builder
 │   ├── pool.ts                 # ConnectionPool: Map<serverId, SessionKeeper>
-│   ├── forward-registry.ts     # ForwardRegistry: tracks active port forwards
-│   ├── local-forward.ts        # createLocalForward(): net.Server + ssh2 forwardOut()
-│   ├── remote-forward.ts       # createRemoteForward(): ssh2 forwardIn() wiring
-│   ├── remote-forward-registry.ts  # RemoteForwardRegistry: tracks remote port forwards
+│   ├── shell-adapter.ts        # ShellAdapter interface, createShellAdapter(), detectShellType()
+│   ├── shell-adapter-posix.ts  # PosixShellAdapter: bash/sh/zsh command wrapping
+│   ├── shell-adapter-powershell.ts  # PowerShellAdapter: PowerShell command wrapping
+│   ├── shell-adapter-cmd.ts    # CmdShellAdapter: cmd.exe command wrapping
 │   ├── shell-session.ts        # ShellSession: persistent shell with marker-based command exec
 │   ├── shell-session.types.ts  # Types, constants, marker generation, output parsing
 │   ├── shell-session.io.ts     # Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt)
 │   ├── shell-registry.ts       # ShellRegistry: Map of serverId → ShellSession
+│   ├── forward-registry.ts     # ForwardRegistry: tracks active port forwards
+│   ├── local-forward.ts        # createLocalForward(): net.Server + ssh2 forwardOut()
+│   ├── remote-forward.ts       # createRemoteForward(): ssh2 forwardIn() wiring
+│   ├── remote-forward-registry.ts  # RemoteForwardRegistry: tracks remote port forwards
 │   ├── jump-stream.ts          # createJumpStream(): nested SSH through bastion
-│   ├── sftp.ts                 # FileTransfer: upload/download with 100MB limit
+│   ├── sftp.ts                 # FileTransfer: upload/download with 100MB limit, cross-platform ~
 │   └── connection.ts           # DEAD CODE - ignore
 └── tools/            # See src/tools/AGENTS.md
     └── *.ts          # 13 MCP tools, each registerXxxTool()
@@ -51,10 +57,14 @@ tests/
 | Change file transfer limits  | `src/ssh/sftp.ts` MAX_FILE_SIZE constant                                               |
 | Add config validation        | `src/config/loader.ts` CONFIG_SCHEMA object                                            |
 | Add new config field         | `src/config/types.ts` + update CONFIG_SCHEMA                                           |
+| Change config path           | `src/config/path.ts` getConfigPath(), expandHome()                                     |
+| Persist runtime config       | `src/config/writer.ts` persistShellType()                                              |
 | Debug auth issues            | `src/ssh/session-connect-config.io.ts` buildSshConnectConfig()                         |
 | Change port forward behavior | `src/ssh/local-forward.ts` createLocalForward()                                        |
 | Change remote port forward   | `src/ssh/remote-forward.ts` createRemoteForward()                                      |
 | Change shell command exec    | `src/ssh/shell-session.ts` ShellSession class                                          |
+| Add shell type adapter       | `src/ssh/shell-adapter*.ts` - interface + per-shell implementations                    |
+| Change shell auto-detection  | `src/ssh/shell-adapter.ts` detectShellType()                                           |
 | Jump host connections        | `src/ssh/jump-stream.ts` createJumpStream()                                            |
 | Add E2E tests                | `tests/e2e/ssh/` - see subdirectory AGENTS.md                                          |
 
@@ -107,7 +117,7 @@ tests/
 - File transfer: 100MB (`src/ssh/sftp.ts` MAX_FILE_SIZE)
 - Command output: 10MB (`src/ssh/shell-session.types.ts` MAX_OUTPUT_SIZE)
 
-**Home Directory Expansion**: `expandHomePath()` in sftp.ts assumes Linux paths (`/home/${username}`). Does not work on macOS or Windows servers.
+**Home Directory Expansion**: `expandRemotePath()` in sftp.ts uses `sftp.realpath('.')` for cross-platform `~` expansion (Linux, macOS, Windows). Falls back to `/home/${username}` if `realpath` fails.
 
 ## Commands
 

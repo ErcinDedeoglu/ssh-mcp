@@ -9,6 +9,7 @@ export class MockSFTPWrapper extends EventEmitter {
   fastGet = vi.fn();
   mkdir = vi.fn();
   stat = vi.fn();
+  realpath = vi.fn();
 
   constructor() {
     super();

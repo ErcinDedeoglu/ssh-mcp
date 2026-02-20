@@ -23,7 +23,7 @@ export function waitForPattern(
   stream: ShellStream,
   pattern: RegExp,
   timeoutMs: number,
-): Promise<void> {
+): Promise<string> {
   return new Promise((resolve, reject) => {
     let buffer = '';
     const timeout = setTimeout(() => {
@@ -35,7 +35,7 @@ export function waitForPattern(
       buffer += data.toString();
       if (pattern.test(stripControlSequences(buffer))) {
         cleanup();
-        resolve();
+        resolve(stripControlSequences(buffer));
       }
     };
 
@@ -48,10 +48,10 @@ export function waitForPattern(
   });
 }
 
-export function waitForInitialPrompt(stream: ShellStream, timeoutMs: number): Promise<void> {
+export function waitForInitialPrompt(stream: ShellStream, timeoutMs: number): Promise<string> {
   return waitForPattern(stream, /[$#>%]\s*$/, timeoutMs);
 }
 
-export function waitForMcpPrompt(stream: ShellStream, timeoutMs: number): Promise<void> {
+export function waitForMcpPrompt(stream: ShellStream, timeoutMs: number): Promise<string> {
   return waitForPattern(stream, new RegExp(`${MCP_PROMPT}\\s*$`), timeoutMs);
 }

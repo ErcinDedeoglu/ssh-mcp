@@ -17,8 +17,8 @@ vi.mock('../../../src/ssh/shell-session.io.js', () => ({
     mockStream = new MockShellStream();
     return Promise.resolve(mockStream);
   }),
-  waitForInitialPrompt: vi.fn().mockResolvedValue(undefined),
-  waitForMcpPrompt: vi.fn().mockResolvedValue(undefined),
+  waitForInitialPrompt: vi.fn().mockResolvedValue('user@host:~$ '),
+  waitForMcpPrompt: vi.fn().mockResolvedValue('__MCP_PROMPT__'),
 }));
 
 describe('ShellSession stall timer', () => {

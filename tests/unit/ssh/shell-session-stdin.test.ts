@@ -17,8 +17,8 @@ vi.mock('../../../src/ssh/shell-session.io.js', () => ({
     mockStream = new MockShellStream();
     return Promise.resolve(mockStream);
   }),
-  waitForInitialPrompt: vi.fn().mockResolvedValue(undefined),
-  waitForMcpPrompt: vi.fn().mockResolvedValue(undefined),
+  waitForInitialPrompt: vi.fn().mockResolvedValue('user@host:~$ '),
+  waitForMcpPrompt: vi.fn().mockResolvedValue('__MCP_PROMPT__'),
 }));
 
 describe('ShellSession stdin support', () => {
@@ -46,6 +46,8 @@ describe('ShellSession stdin support', () => {
     const commandWrite = mockWrite.mock.calls[0][0];
     expect(commandWrite).toContain('cat > /tmp/test.txt');
 
+    // Stdin is delivered after a delay to let the shell start the command
+    await vi.advanceTimersByTimeAsync(100);
     const stdinWrite = mockWrite.mock.calls[1][0];
     expect(stdinWrite).toBe('hello world\n');
 
@@ -69,6 +71,7 @@ describe('ShellSession stdin support', () => {
 
     mockWrite.mockClear();
     const executePromise = session.execute('cat', { stdin: 'no trailing newline' });
+    await vi.advanceTimersByTimeAsync(100);
 
     const stdinWrite = mockWrite.mock.calls[1][0];
     expect(stdinWrite).toBe('no trailing newline\n');
@@ -90,6 +93,7 @@ describe('ShellSession stdin support', () => {
 
     mockWrite.mockClear();
     const executePromise = session.execute('cat', { stdin: 'has newline\n' });
+    await vi.advanceTimersByTimeAsync(100);
 
     const stdinWrite = mockWrite.mock.calls[1][0];
     expect(stdinWrite).toBe('has newline\n');
@@ -133,6 +137,7 @@ describe('ShellSession stdin support', () => {
     const multiLineContent = 'line1\nline2\nline3';
     mockWrite.mockClear();
     const executePromise = session.execute('cat > /tmp/multiline.txt', { stdin: multiLineContent });
+    await vi.advanceTimersByTimeAsync(100);
 
     const stdinWrite = mockWrite.mock.calls[1][0];
     expect(stdinWrite).toBe('line1\nline2\nline3\n');
@@ -157,6 +162,7 @@ describe('ShellSession stdin support', () => {
 
     mockWrite.mockClear();
     const executePromise = session.execute('cat', { stdin: '' });
+    await vi.advanceTimersByTimeAsync(100);
 
     const stdinWrite = mockWrite.mock.calls[1][0];
     expect(stdinWrite).toBe('\n');

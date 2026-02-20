@@ -2,10 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   generateMarker,
   stripControlSequences,
-  buildShellInitCommands,
-  wrapCommand,
   MCP_PROMPT,
 } from '../../../src/ssh/shell-session.types.js';
+import { createShellAdapter } from '../../../src/ssh/shell-adapter.js';
 
 describe('shell-session helper functions', () => {
   describe('generateMarker', () => {
@@ -60,21 +59,24 @@ describe('shell-session helper functions', () => {
     });
   });
 
-  describe('buildShellInitCommands', () => {
+  describe('posix adapter buildInitCommands', () => {
     it('includes PS1 with MCP_PROMPT', () => {
-      const init = buildShellInitCommands();
+      const adapter = createShellAdapter('posix');
+      const init = adapter.buildInitCommands();
       expect(init).toContain(`PS1="${MCP_PROMPT}"`);
     });
 
     it('sets TERM to dumb', () => {
-      const init = buildShellInitCommands();
+      const adapter = createShellAdapter('posix');
+      const init = adapter.buildInitCommands();
       expect(init).toContain('TERM=dumb');
     });
   });
 
-  describe('wrapCommand', () => {
+  describe('posix adapter wrapCommand', () => {
     it('wraps command with exit code capture and marker', () => {
-      const wrapped = wrapCommand('ls -la', '__MARKER__');
+      const adapter = createShellAdapter('posix');
+      const wrapped = adapter.wrapCommand('ls -la', '__MARKER__');
       expect(wrapped).toContain('ls -la');
       expect(wrapped).toContain('__MCP_EXIT=$?');
       expect(wrapped).toContain('echo "__MARKER__"');

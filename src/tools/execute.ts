@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { Config } from '../config/types.js';
+import type { Config, ShellType, ConcreteShellType, ServerConfig } from '../config/types.js';
+import { persistShellType } from '../config/writer.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
 import { ShellRegistry } from '../ssh/shell-registry.js';
@@ -10,12 +11,6 @@ import { sanitizeError, truncateOutput, DEFAULT_MAX_OUTPUT_LENGTH } from './util
 
 const DEFAULT_COMMAND_TIMEOUT_SECONDS = 60;
 const MS_PER_SECOND = 1000;
-
-export interface ExecuteResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-}
 
 export function registerExecuteTool(
   server: McpServer,
@@ -105,6 +100,8 @@ export function registerExecuteTool(
           shellRegistry,
           {
             agentForward: effectiveAgentForward,
+            shellType: serverConfig.shell,
+            serverConfig,
           },
         );
         const timeoutMs = resolveTimeoutMs(timeout, serverConfig, config);
@@ -144,19 +141,15 @@ export function registerExecuteTool(
 
 interface GetOrCreateShellOptions {
   agentForward?: boolean;
+  shellType?: ShellType;
+  serverConfig?: ServerConfig;
 }
-
-interface GetOrCreateShellResult {
-  shell: ShellSession;
-  recreated: boolean;
-}
-
 async function getOrCreateShell(
   serverId: string,
   client: Parameters<ShellSession['initialize']>[0],
   registry: ShellRegistry,
   options: GetOrCreateShellOptions = {},
-): Promise<GetOrCreateShellResult> {
+): Promise<{ shell: ShellSession; recreated: boolean }> {
   const requestedAgentForward = options.agentForward ?? false;
   let shell = registry.get(serverId);
   let recreated = false;
@@ -170,25 +163,32 @@ async function getOrCreateShell(
 
   if (shell?.isReady) return { shell, recreated };
 
-  shell = new ShellSession({ agentForward: requestedAgentForward });
+  const wasAuto = !options.shellType || options.shellType === 'auto';
+  shell = new ShellSession({ agentForward: requestedAgentForward, shellType: options.shellType });
   await shell.initialize(client);
   registry.set(serverId, shell);
+
+  if (wasAuto && shell.shellType !== 'auto') {
+    const detected = shell.shellType as ConcreteShellType;
+    if (options.serverConfig) options.serverConfig.shell = detected;
+    persistShellType(serverId, detected);
+  }
+
   return { shell, recreated };
 }
 
 function resolveTimeoutMs(
   timeout: number | undefined,
-  serverConfig: { timeouts?: { command?: number } } | undefined,
+  sc: { timeouts?: { command?: number } } | undefined,
   config: Config,
 ): number {
-  const seconds =
-    timeout ??
-    serverConfig?.timeouts?.command ??
-    config.defaults?.timeouts?.command ??
-    DEFAULT_COMMAND_TIMEOUT_SECONDS;
-  return seconds * MS_PER_SECOND;
+  return (
+    (timeout ??
+      sc?.timeouts?.command ??
+      config.defaults?.timeouts?.command ??
+      DEFAULT_COMMAND_TIMEOUT_SECONDS) * MS_PER_SECOND
+  );
 }
-
 function resolveStallTimeoutMs(stallTimeout: number | null | undefined): number | null {
   if (stallTimeout === null || stallTimeout === 0) return null;
   if (stallTimeout === undefined) return undefined as unknown as null;
