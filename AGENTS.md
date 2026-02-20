@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Generated: 2026-02-20 | Branch: v1.0 -->
+<!-- Generated: 2026-02-21 | Branch: v1.0 -->
 
 ## Overview
 
@@ -21,15 +21,20 @@ src/
 │   ├── session.ts              # SessionKeeper: EventEmitter wrapping ssh2 Client, auto-reconnect
 │   ├── session.types.ts        # Types, constants, pure functions (calculateReconnectDelay, safeEmitError)
 │   ├── session-connect-config.io.ts  # buildSshConnectConfig() - auth config builder
+│   ├── session-ping.io.ts      # SSH-level ping via global request
 │   ├── pool.ts                 # ConnectionPool: Map<serverId, SessionKeeper>
 │   ├── shell-adapter.ts        # ShellAdapter interface, createShellAdapter(), detectShellType()
 │   ├── shell-adapter-posix.ts  # PosixShellAdapter: bash/sh/zsh command wrapping
 │   ├── shell-adapter-powershell.ts  # PowerShellAdapter: PowerShell command wrapping
-│   ├── shell-adapter-cmd.ts    # CmdShellAdapter: cmd.exe command wrapping
+│   ├── shell-adapter-cmd.ts    # CmdShellAdapter: cmd.exe command wrapping (call + two-line wrapper)
 │   ├── shell-session.ts        # ShellSession: persistent shell with marker-based command exec
 │   ├── shell-session.types.ts  # Types, constants, marker generation, output parsing
 │   ├── shell-session.io.ts     # Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt)
+│   ├── shell-session-writer.ts # writeCommand(): writes wrapped commands + optional stdin to stream
+│   ├── shell-session-history.ts # ShellHistory: command history tracking with truncation
+│   ├── shell-session-timers.ts # Timer state management (timeout + stall timers)
 │   ├── shell-registry.ts       # ShellRegistry: Map of serverId → ShellSession
+│   ├── job-registry.ts         # JobRegistry: background job tracking for execute_background
 │   ├── forward-registry.ts     # ForwardRegistry: tracks active port forwards
 │   ├── local-forward.ts        # createLocalForward(): net.Server + ssh2 forwardOut()
 │   ├── remote-forward.ts       # createRemoteForward(): ssh2 forwardIn() wiring
@@ -122,14 +127,14 @@ tests/
 ## Commands
 
 ```bash
-npm test                    # Unit tests (fast, mocked, parallel)
-npm run test:e2e            # E2E tests - parallel 8 shards (default)
-npm run test:e2e:sequential # E2E tests - single shard for debugging
-SHARDS=4 npm run test:e2e   # E2E tests - custom shard count
-npm run test:all            # Unit + E2E
-npm run build               # TypeScript → dist/
-npm run lint                # ESLint + Prettier + typecheck
-npm run typecheck           # tsc --noEmit
+bun run test                    # Unit tests (fast, mocked, parallel)
+bun run test:e2e                # E2E tests - parallel 8 shards (default)
+bun run test:e2e:sequential     # E2E tests - single shard for debugging
+SHARDS=4 bun run test:e2e       # E2E tests - custom shard count
+bun run test:all                # Unit + E2E
+bun run build                   # TypeScript → dist/
+bun run lint                    # ESLint + Prettier + typecheck
+bun run typecheck               # tsc --noEmit
 ```
 
 ## Testing Notes

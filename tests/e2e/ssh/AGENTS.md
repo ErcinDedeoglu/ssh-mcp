@@ -70,12 +70,12 @@ Ports are calculated via `getShardPorts()` in `ssh.setup.ts`.
 ## Running Tests
 
 ```bash
-npm run test:e2e              # Parallel with 8 shards (default)
-npm run test:e2e:sequential   # Single shard for debugging
-SHARDS=4 npm run test:e2e     # Custom shard count
-npm run test:e2e:up           # Start Docker containers only
-npm run test:e2e:run          # Run tests (assumes Docker running)
-npm run test:e2e:down         # Stop Docker containers
+bun run test:e2e              # Parallel with 8 shards (default)
+bun run test:e2e:sequential   # Single shard for debugging
+SHARDS=4 bun run test:e2e     # Custom shard count
+bun run test:e2e:up           # Start Docker containers only
+bun run test:e2e:run          # Run tests (assumes Docker running)
+bun run test:e2e:down         # Stop Docker containers
 ```
 
 ### Parallel Execution Architecture
@@ -121,4 +121,6 @@ Formula: `(2 + shardIndex) * 1000 + offset` where offset is 222, 223, or 224.
 
 **Check isDockerRunning**: All E2E tests skip automatically if Docker unavailable.
 
-**Parallel sharding**: Tests can run in parallel across multiple shards via `npm run test:e2e:parallel`. Within a shard, tests run sequentially (`fileParallelism: false`).
+**Parallel sharding**: Tests can run in parallel across multiple shards via `bun run test:e2e`. Within a shard, tests run sequentially (`fileParallelism: false`).
+
+**Use `remotePort: 0` for remote forwards**: Always use OS auto-assigned ports in tests to avoid port collisions across parallel shards.

@@ -22,7 +22,11 @@ SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool 
 | `shell-session.ts`             | ShellSession: persistent shell with marker-based command exec           |
 | `shell-session.types.ts`       | Types, constants, marker generation, output parsing functions           |
 | `shell-session.io.ts`          | Prompt waiting functions (waitForInitialPrompt, waitForMcpPrompt)       |
+| `shell-session-writer.ts`      | writeCommand(): writes wrapped commands + optional stdin to stream      |
+| `shell-session-history.ts`     | ShellHistory: command history tracking with truncation                  |
+| `shell-session-timers.ts`      | Timer state management (timeout + stall timers)                         |
 | `shell-registry.ts`            | ShellRegistry: Map of serverId → ShellSession                           |
+| `job-registry.ts`              | JobRegistry: background job tracking for execute_background             |
 | `forward-registry.ts`          | ForwardRegistry: tracks active local port forwards                      |
 | `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring             |
 | `remote-forward.ts`            | createRemoteForward(): ssh2 forwardIn() wiring                          |
@@ -91,13 +95,16 @@ DISCONNECTED → connect() → CONNECTED
 | Change output size limit      | `shell-session.types.ts` MAX_OUTPUT_SIZE               |
 | Modify shell output parsing   | `shell-session.types.ts` parseMarkedOutput()           |
 | Change shell initialization   | `shell-session.io.ts` waitForInitialPrompt()           |
+| Change command writing/stdin  | `shell-session-writer.ts` writeCommand()               |
+| Change command history        | `shell-session-history.ts` ShellHistory class          |
+| Change timeout/stall timers   | `shell-session-timers.ts` startTimeoutTimer(), etc.    |
 | Modify jump host behavior     | `jump-stream.ts` createJumpStream()                    |
 
 ## Shell Adapter Architecture
 
 Shell adapters abstract command wrapping and initialization across shell types:
 
-- `ShellAdapter` interface (`shell-adapter.ts`): `wrapCommand()`, `getInitCommands()`, `eofChar`, `parseExitCode()`
+- `ShellAdapter` interface (`shell-adapter.ts`): `wrapCommand()`, `buildInitCommands()`, `isEchoedCommandLine()`, `eofChar`, `lineEnding`
 - Factory: `createShellAdapter(shellType)` returns the concrete adapter
 - Detection: `detectShellType(promptText)` analyzes last line of initial prompt
 
@@ -109,7 +116,16 @@ Shell adapters abstract command wrapping and initialization across shell types:
 4. Concrete adapter is created and used for all subsequent commands
 5. Detected type is persisted to config via `persistShellType()` (best-effort)
 
-**Stdin delivery**: Commands with `stdin` use a 100ms delay (`STDIN_DELIVERY_DELAY_MS`) between writing the wrapped command and delivering stdin+EOF, to ensure the target process is ready.
+**Stdin delivery**: Commands with `stdin` use a 100ms delay (`STDIN_DELIVERY_DELAY_MS`) between writing the wrapped command and delivering stdin+EOF, to ensure the target process is ready. Implemented in `shell-session-writer.ts`.
+
+**cmd.exe wrapper details** (`shell-adapter-cmd.ts`):
+
+- Two-line wrapper: `@call <command>\r\n` + `@echo. & echo MARKER & echo %ERRORLEVEL%\r\n`
+- `call` forces cmd.exe to update `%ERRORLEVEL%` for built-ins (`echo`, `set`, `cd`, `dir`) that otherwise leave it stale
+- Line 2 is a separate parse context, so `%ERRORLEVEL%` expands at parse time **after** line 1 completes
+- `@` prefix suppresses command echoing; `isEchoedCommandLine()` filters residual conhost echoes
+- Conhost wraps long echoed commands at ~80 cols; fragments are detected via substring + operator/partial-word heuristics
+- `rem`/`goto`/`::` commands eat the rest of the line, so they use `@<command>` (no `call`) with hardcoded exit code 0
 
 ## Anti-Patterns
 
