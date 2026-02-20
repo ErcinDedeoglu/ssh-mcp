@@ -18,16 +18,17 @@ export class CmdShellAdapter implements ShellAdapter {
   }
 
   wrapCommand(command: string, marker: string): string {
-    // Two-line wrapper: line 1 runs the command, line 2 emits the marker and
-    // exit code. cmd.exe parses each \r\n-terminated line as a separate unit,
-    // so %ERRORLEVEL% on line 2 is expanded *after* line 1 completes —
-    // reflecting the real exit code rather than a stale parse-time value.
+    // Two-line wrapper:
+    //   Line 1: `@call <command>` — `call` forces cmd.exe to update %ERRORLEVEL%
+    //     even for built-ins (echo, set, cd, dir) that otherwise leave it stale.
+    //   Line 2: `@echo. & echo MARKER & echo %ERRORLEVEL%` — separate parse
+    //     context, so %ERRORLEVEL% is expanded at line-2 parse time (after
+    //     line 1 completes), capturing the real exit code.
     if (LINE_EATING_CMD.test(command)) {
-      // rem/goto/:: eat the rest of the line, so they go on a separate line.
-      // These are no-ops so we hardcode exit code 0.
+      // rem/goto/:: eat the rest of the line; no-ops → hardcoded exit code 0.
       this.lastWrapped = `@${command}\r\n` + `@echo. & echo ${marker} & echo 0\r\n`;
     } else {
-      this.lastWrapped = `@${command}\r\n` + `@echo. & echo ${marker} & echo %ERRORLEVEL%\r\n`;
+      this.lastWrapped = `@call ${command}\r\n` + `@echo. & echo ${marker} & echo %ERRORLEVEL%\r\n`;
     }
     return this.lastWrapped;
   }
@@ -38,14 +39,22 @@ export class CmdShellAdapter implements ShellAdapter {
     // Filter wrapper infrastructure lines echoed by conhost
     if (trimmed.includes(`echo ${marker}`)) return true;
     if (!command) return false;
-    // Exact match for the @-prefixed echoed command
-    if (trimmed === `@${command}`) return true;
-    // Conhost line-wraps long commands, producing fragments. These fragments
-    // are substrings of the full wrapped text and typically contain cmd.exe
-    // operators (& | > <) that real output lines rarely have.
-    if (this.lastWrapped && trimmed.length >= 4) {
-      const flat = this.lastWrapped.replace(/\r?\n/g, '');
-      if (flat.includes(trimmed) && /[&|><]/.test(trimmed)) return true;
+    // Exact match for the @call or @-prefixed echoed command (rem/goto use @)
+    if (trimmed === `@call ${command}` || trimmed === `@${command}`) return true;
+    // Conhost line-wraps long echoed commands at ~80 cols, producing fragments.
+    // Filter these by checking if the fragment is a substring of the wrapped
+    // text AND either (a) contains cmd operators, or (b) is a partial word
+    // (not bounded by whitespace/start/end in the wrapped text).
+    if (this.lastWrapped && trimmed.length >= 2) {
+      const flat = this.lastWrapped.replace(/\r?\n/g, ' ');
+      if (flat.includes(trimmed)) {
+        if (/[&|><]/.test(trimmed)) return true;
+        // Partial-word fragment: not a standalone word in the wrapped text
+        const idx = flat.indexOf(trimmed);
+        const before = idx > 0 ? flat[idx - 1] : ' ';
+        const after = idx + trimmed.length < flat.length ? flat[idx + trimmed.length] : ' ';
+        if (before !== ' ' || after !== ' ') return true;
+      }
     }
     return false;
   }

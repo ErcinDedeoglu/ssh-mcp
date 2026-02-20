@@ -15,11 +15,11 @@ describe('CmdShellAdapter', () => {
     expect(cmds).toContain(`prompt ${MCP_PROMPT}`);
   });
 
-  it('wrapCommand uses two lines: command then marker + exit code', () => {
+  it('wrapCommand uses two lines: @call command then marker + exit code', () => {
     const wrapped = adapter.wrapCommand('dir', '__MARKER__');
-    // Line 1: @command\r\n — runs the command with echo suppressed
+    // Line 1: @call command\r\n — call forces ERRORLEVEL update for built-ins
     // Line 2: @echo. & echo MARKER & echo %ERRORLEVEL%\r\n — separate parse context
-    expect(wrapped).toBe('@dir\r\n@echo. & echo __MARKER__ & echo %ERRORLEVEL%\r\n');
+    expect(wrapped).toBe('@call dir\r\n@echo. & echo __MARKER__ & echo %ERRORLEVEL%\r\n');
   });
 
   it('wrapCommand uses two lines for rem/goto/:: with hardcoded exit 0', () => {
@@ -35,26 +35,32 @@ describe('CmdShellAdapter', () => {
   it('isEchoedCommandLine detects cmd wrapper and echoed command lines', () => {
     adapter.wrapCommand('dir', '__M__');
     expect(adapter.isEchoedCommandLine('echo __M__', '__M__')).toBe(true);
-    expect(adapter.isEchoedCommandLine('@dir', '__M__', 'dir')).toBe(true);
+    expect(adapter.isEchoedCommandLine('@call dir', '__M__', 'dir')).toBe(true);
     expect(adapter.isEchoedCommandLine('real output', '__M__')).toBe(false);
     expect(adapter.isEchoedCommandLine('real output', '__M__', 'dir')).toBe(false);
+    // rem/goto use @command (no call) — must also be filtered
+    adapter.wrapCommand('rem a comment', '__M__');
+    expect(adapter.isEchoedCommandLine('@rem a comment', '__M__', 'rem a comment')).toBe(true);
   });
 
   it('isEchoedCommandLine catches conhost line-wrapped fragments', () => {
     const longCmd = 'mkdir %TEMP%\\test & echo created & rmdir %TEMP%\\test & echo removed';
     adapter.wrapCommand(longCmd, '__M__');
-    // Conhost wraps echoed commands; fragments contain cmd operators (&)
+    // Fragments containing cmd operators (&)
     expect(adapter.isEchoedCommandLine('& echo removed', '__M__', longCmd)).toBe(true);
     expect(
       adapter.isEchoedCommandLine(
-        '@mkdir %TEMP%\\test & echo created & rmdir %TEMP%\\test &',
+        '@call mkdir %TEMP%\\test & echo created & rmdir %TEMP%\\test &',
         '__M__',
         longCmd,
       ),
     ).toBe(true);
-    // Fragment from mid-line break: "t & del file.txt" contains &
+    // Fragment with operator from mid-line break
     expect(adapter.isEchoedCommandLine('t & echo removed', '__M__', longCmd)).toBe(true);
-    // Actual command output should NOT be filtered (no & operator)
+    // Partial-word fragment without operators (e.g. "ed" from "created")
+    expect(adapter.isEchoedCommandLine('ed', '__M__', longCmd)).toBe(true);
+    expect(adapter.isEchoedCommandLine('oved', '__M__', longCmd)).toBe(true);
+    // Actual command output (whole words) should NOT be filtered
     expect(adapter.isEchoedCommandLine('created', '__M__', longCmd)).toBe(false);
     expect(adapter.isEchoedCommandLine('removed', '__M__', longCmd)).toBe(false);
   });

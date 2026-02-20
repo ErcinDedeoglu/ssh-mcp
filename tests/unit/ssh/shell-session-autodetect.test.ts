@@ -115,7 +115,7 @@ describe('ShellSession auto-detection', () => {
 
       void session.execute('dir');
       const wrappedCmd = mockWrite.mock.calls[0][0] as string;
-      expect(wrappedCmd).toContain('ERRORLEVEL');
+      expect(wrappedCmd).toContain('@call dir');
       expect(wrappedCmd).toContain('echo %ERRORLEVEL%');
     });
 
