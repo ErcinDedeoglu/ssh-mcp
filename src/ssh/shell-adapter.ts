@@ -27,6 +27,9 @@ export interface ShellAdapter {
   /** EOF character to send after stdin content (\x04 for POSIX, \x1A for Windows) */
   readonly eofChar: string;
 
+  /** Line ending for command submission (\n for POSIX, \r\n for Windows) */
+  readonly lineEnding: string;
+
   /** Command to exit the shell */
   readonly exitCommand: string;
 }
@@ -54,7 +57,7 @@ export function detectShellType(promptText: string): ConcreteShellType {
   const lastLine = (lines[lines.length - 1] ?? '').trim();
   // PowerShell: word-bounded "PS" followed by space and path ending with >
   if (/\bPS\s+.+>/.test(lastLine)) return 'powershell';
-  // cmd.exe: line starts with drive letter + colon + backslash, ends with >
-  if (/^[A-Z]:\\[^>]*>\s*$/i.test(lastLine)) return 'cmd';
+  // cmd.exe: drive letter path ending with > (e.g., "C:\Users\foo>" or "user@HOST C:\Users\foo>")
+  if (/[A-Z]:\\[^>]*>\s*$/i.test(lastLine)) return 'cmd';
   return 'posix';
 }

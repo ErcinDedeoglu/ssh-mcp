@@ -66,13 +66,15 @@ export function generateMarker(): string {
 
 export function stripControlSequences(str: string): string {
   return str
-    .replace(/\x1B\[[0-9;?]*[a-zA-Z]/g, '') // ANSI escape sequences (including private modes like \e[?2004h)
+    .replace(/\x1B\[[0-9;]*[Hf]/g, '\n') // Cursor position (H/f) → newline (implies visual line break)
+    .replace(/\x1B\[[0-9;?]*[a-zA-Z]/g, '') // Other ANSI escape sequences
     .replace(/\x1B][^\x07]*\x07/g, '') // OSC sequences
     .replace(/\r(?!\n)/g, ''); // Carriage returns not followed by newline
 }
 
 function findStandaloneMarker(buffer: string, marker: string): number {
-  const markerLinePattern = new RegExp(`(^|\\n)${marker}(\\r?\\n|$)`);
+  // Allow optional trailing whitespace (Windows conhost may pad with spaces)
+  const markerLinePattern = new RegExp(`(^|\\n)${marker}\\s*(\\r?\\n|$)`);
   const match = buffer.match(markerLinePattern);
   if (!match || match.index === undefined) return -1;
   return match.index + (match[1] === '\n' ? 1 : 0);
@@ -83,18 +85,19 @@ export function parseMarkedOutput(
   marker: string,
   adapter: ShellAdapter,
 ): { output: string; exitCode: number; remaining: string } | null {
-  const markerIndex = findStandaloneMarker(buffer, marker);
+  // Clean escape sequences first so markers aren't broken by injected OSC/cursor sequences
+  const cleaned = stripControlSequences(buffer);
+  const markerIndex = findStandaloneMarker(cleaned, marker);
   if (markerIndex === -1) return null;
 
-  const beforeMarker = buffer.substring(0, markerIndex);
-  const afterMarker = buffer.substring(markerIndex + marker.length);
+  const beforeMarker = cleaned.substring(0, markerIndex);
+  const afterMarker = cleaned.substring(markerIndex + marker.length);
   const exitCodeMatch = afterMarker.match(/^[\s\r\n]*(\d+)/);
   if (!exitCodeMatch) return null;
   const exitCode = parseInt(exitCodeMatch[1], 10);
   const remaining = afterMarker.replace(/^[\s\r\n]*\d+[\s\r\n]*/, '');
 
-  const cleaned = stripControlSequences(beforeMarker);
-  const lines = cleaned.split('\n');
+  const lines = beforeMarker.split('\n');
   const outputLines = lines.filter((line) => !adapter.isEchoedCommandLine(line, marker));
   // Strip leading prompt that appears from the previous command
   let output = outputLines.join('\n').trim();

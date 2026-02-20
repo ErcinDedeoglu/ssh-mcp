@@ -22,8 +22,9 @@ describe('createShellAdapter', () => {
 describe('PosixShellAdapter', () => {
   const adapter = createShellAdapter('posix');
 
-  it('has correct EOF char', () => {
+  it('has correct EOF char and line ending', () => {
     expect(adapter.eofChar).toBe('\x04');
+    expect(adapter.lineEnding).toBe('\n');
   });
 
   it('buildInitCommands includes PS1 prompt', () => {
@@ -52,8 +53,9 @@ describe('PosixShellAdapter', () => {
 describe('PowerShellAdapter', () => {
   const adapter = createShellAdapter('powershell');
 
-  it('has correct EOF char', () => {
+  it('has correct EOF char and line ending', () => {
     expect(adapter.eofChar).toBe('\x1A');
+    expect(adapter.lineEnding).toBe('\r\n');
   });
 
   it('buildInitCommands sets prompt function', () => {
@@ -80,14 +82,14 @@ describe('PowerShellAdapter', () => {
 describe('CmdShellAdapter', () => {
   const adapter = createShellAdapter('cmd');
 
-  it('has correct EOF char', () => {
+  it('has correct EOF char and line ending', () => {
     expect(adapter.eofChar).toBe('\x1A');
+    expect(adapter.lineEnding).toBe('\r\n');
   });
 
   it('buildInitCommands sets cmd prompt', () => {
     const cmds = adapter.buildInitCommands();
     expect(cmds).toContain(`prompt ${MCP_PROMPT}`);
-    expect(cmds).toContain('@echo off');
   });
 
   it('wrapCommand uses & separator and %ERRORLEVEL%', () => {

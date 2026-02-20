@@ -69,7 +69,7 @@ export class ShellSession {
     if (!this.adapter) {
       this.adapter = createShellAdapter(detectShellType(promptText));
     }
-    this.stream.write(this.adapter.buildInitCommands() + '\n');
+    this.stream.write(this.adapter.buildInitCommands() + this.adapter.lineEnding);
     await waitForMcpPrompt(this.stream, this.options.timeoutMs);
     this.ready = true;
   }
@@ -95,7 +95,7 @@ export class ShellSession {
   destroy(): void {
     clearTimers(this.timers);
     this.rejectPendingCommands(new Error('Shell session destroyed'));
-    this.stream?.end((this.adapter?.exitCommand ?? 'exit') + '\n');
+    this.stream?.end((this.adapter?.exitCommand ?? 'exit') + (this.adapter?.lineEnding ?? '\n'));
     this.stream = null;
     this.ready = false;
     this.buffer = '';

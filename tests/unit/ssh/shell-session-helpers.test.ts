@@ -49,6 +49,26 @@ describe('shell-session helper functions', () => {
       expect(stripControlSequences(input)).toBe('prompt% ');
     });
 
+    it('replaces cursor position sequences with newlines', () => {
+      const input = 'before\x1B[4;1Hafter';
+      expect(stripControlSequences(input)).toBe('before\nafter');
+    });
+
+    it('replaces cursor home sequence with newline', () => {
+      const input = 'line1\x1B[Hline2';
+      expect(stripControlSequences(input)).toBe('line1\nline2');
+    });
+
+    it('separates Win32-OpenSSH copyright from prompt via cursor position', () => {
+      // Real Windows SSH data: copyright text + ESC[4;1H + prompt
+      const input =
+        '(c) Microsoft Corporation. All rights reserved.' +
+        '\x1B[4;1Hercin@ERCIN-WS C:\\Users\\ercin>';
+      const result = stripControlSequences(input);
+      expect(result).toContain('\n');
+      expect(result).toMatch(/ercin@ERCIN-WS C:\\Users\\ercin>$/);
+    });
+
     it('strips zsh PROMPT_SP preamble with bracketed paste', () => {
       // Real zsh output: PROMPT_SP bold/reverse %, spaces, CR sequences, then actual prompt
       const input =

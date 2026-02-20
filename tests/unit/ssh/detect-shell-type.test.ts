@@ -31,6 +31,8 @@ describe('detectShellType', () => {
       ['C:\\Users\\ercin> ', 'trailing space'],
       ['D:\\Projects>', 'D: drive'],
       ['E:\\>', 'root of E: drive'],
+      ['ercin@ERCIN-WS C:\\Users\\ercin>', 'Win32-OpenSSH user@HOST prefix'],
+      ['admin@SERVER C:\\Windows\\system32>', 'Win32-OpenSSH admin system32'],
     ])('detects from %s (%s)', (prompt) => {
       expect(detectShellType(prompt)).toBe('cmd');
     });
@@ -38,6 +40,16 @@ describe('detectShellType', () => {
     it('detects with Windows version banner', () => {
       const text =
         'Microsoft Windows [Version 10.0.19045]\n(c) Microsoft Corp.\n\nC:\\Users\\admin>';
+      expect(detectShellType(text)).toBe('cmd');
+    });
+
+    it('detects Win32-OpenSSH prompt with banner (real-world)', () => {
+      const text = [
+        'Microsoft Windows [Version 10.0.26200.7840]',
+        '(c) Microsoft Corporation. All rights reserved.',
+        '',
+        'ercin@ERCIN-WS C:\\Users\\ercin>',
+      ].join('\r\n');
       expect(detectShellType(text)).toBe('cmd');
     });
   });

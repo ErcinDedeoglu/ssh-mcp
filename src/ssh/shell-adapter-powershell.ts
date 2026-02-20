@@ -6,6 +6,7 @@ import { MCP_PROMPT } from './shell-session.types.js';
 export class PowerShellAdapter implements ShellAdapter {
   readonly shellType: ConcreteShellType = 'powershell';
   readonly eofChar = '\x1A';
+  readonly lineEnding = '\r\n';
   readonly exitCommand = 'exit';
 
   buildInitCommands(): string {
@@ -27,7 +28,7 @@ export class PowerShellAdapter implements ShellAdapter {
     return (
       `${command}; ` +
       `$__MCP_EXIT = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } elseif ($?) { 0 } else { 1 }; ` +
-      `Write-Host ""; Write-Host "${marker}"; Write-Host $__MCP_EXIT\n`
+      `Write-Host ""; Write-Host "${marker}"; Write-Host $__MCP_EXIT\r\n`
     );
   }
 

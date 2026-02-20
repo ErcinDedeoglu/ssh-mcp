@@ -6,6 +6,7 @@ import { MCP_PROMPT, MCP_PROMPT_CONTINUATION } from './shell-session.types.js';
 export class PosixShellAdapter implements ShellAdapter {
   readonly shellType: ConcreteShellType = 'posix';
   readonly eofChar = '\x04';
+  readonly lineEnding = '\n';
   readonly exitCommand = 'exit';
 
   buildInitCommands(): string {

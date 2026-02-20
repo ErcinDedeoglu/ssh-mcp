@@ -84,6 +84,15 @@ describe('parseMarkedOutput', () => {
       expect(result!.output).toBe('line1\r\nline2');
     });
 
+    it('handles marker with trailing spaces (Windows conhost)', () => {
+      const cmd = createShellAdapter('cmd');
+      const buffer = 'ercin-ws\\ercin\r\n \r\n__MARKER__ \r\n0 \r\n__MCP_PROMPT__\r\n';
+      const result = parseMarkedOutput(buffer, '__MARKER__', cmd);
+      expect(result).not.toBeNull();
+      expect(result!.output).toContain('ercin-ws\\ercin');
+      expect(result!.exitCode).toBe(0);
+    });
+
     it('handles marker at start of buffer', () => {
       const buffer = '__MARKER__\n0\n';
       const result = parseMarkedOutput(buffer, '__MARKER__', posix);
