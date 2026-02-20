@@ -21,8 +21,8 @@ export interface ShellAdapter {
   /** Wrap a user command with exit code capture and end marker */
   wrapCommand(command: string, marker: string): string;
 
-  /** Check if a line is an echoed wrapper command that should be filtered from output */
-  isEchoedCommandLine(line: string, marker: string): boolean;
+  /** Check if a line is an echoed wrapper/user command that should be filtered from output */
+  isEchoedCommandLine(line: string, marker: string, command?: string): boolean;
 
   /** EOF character to send after stdin content (\x04 for POSIX, \x1A for Windows) */
   readonly eofChar: string;

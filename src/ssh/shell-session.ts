@@ -121,7 +121,8 @@ export class ShellSession {
     } catch {
       // Callback errors ignored to avoid breaking command execution
     }
-    const parsed = parseMarkedOutput(this.buffer, this.currentCommand.marker, this.adapter!);
+    const cmd = this.currentCommand;
+    const parsed = parseMarkedOutput(this.buffer, cmd.marker, this.adapter!, cmd.command);
     if (parsed) {
       this.completeCurrentCommand(parsed.output, parsed.exitCode);
       this.buffer = parsed.remaining;

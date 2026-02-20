@@ -17,20 +17,22 @@ export class CmdShellAdapter implements ShellAdapter {
   }
 
   wrapCommand(command: string, marker: string): string {
-    // cmd.exe: use & for command chaining, %ERRORLEVEL% for exit code,
-    // echo. for blank line (echo "" prints literal quotes in cmd).
+    // @ suppresses echo of the line in cmd.exe interactive mode.
+    // User command is on its own line so rem/goto/:: don't eat the marker chain.
+    // echo. outputs a blank line (echo "" prints literal quotes in cmd).
     return (
-      `${command} & set __MCP_EXIT=%ERRORLEVEL% ` +
+      `@${command}\r\n` +
+      `@set __MCP_EXIT=%ERRORLEVEL% ` +
       `& echo. & echo ${marker} & call echo %__MCP_EXIT%\r\n`
     );
   }
 
-  isEchoedCommandLine(line: string, marker: string): boolean {
-    const hasExitCapture =
-      line.includes('__MCP_EXIT') || line.includes('%ERRORLEVEL%') || line.includes('%__MCP_EXIT%');
-    const hasMarkerEcho = line.includes(`echo ${marker}`) || line.includes(marker);
-    const hasEchoPattern = line.includes('echo.') && hasExitCapture;
-    // cmd.exe echoes the full command line before output unless @echo off is effective
-    return hasExitCapture || (hasMarkerEcho && hasEchoPattern);
+  isEchoedCommandLine(line: string, marker: string, command?: string): boolean {
+    const trimmed = line.trim();
+    // Filter the echoed user command (prefixed with @ to suppress in batch mode)
+    if (command && trimmed === `@${command}`) return true;
+    const hasExitCapture = trimmed.includes('__MCP_EXIT') || trimmed.includes('%ERRORLEVEL%');
+    const hasMarkerEcho = trimmed.includes(`echo ${marker}`);
+    return hasExitCapture || hasMarkerEcho;
   }
 }

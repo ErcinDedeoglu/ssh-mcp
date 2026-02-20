@@ -84,6 +84,7 @@ export function parseMarkedOutput(
   buffer: string,
   marker: string,
   adapter: ShellAdapter,
+  command?: string,
 ): { output: string; exitCode: number; remaining: string } | null {
   // Clean escape sequences first so markers aren't broken by injected OSC/cursor sequences
   const cleaned = stripControlSequences(buffer);
@@ -98,8 +99,9 @@ export function parseMarkedOutput(
   const remaining = afterMarker.replace(/^[\s\r\n]*\d+[\s\r\n]*/, '');
 
   const lines = beforeMarker.split('\n');
-  const outputLines = lines.filter((line) => !adapter.isEchoedCommandLine(line, marker));
-  // Strip leading prompt that appears from the previous command
+  const outputLines = lines.filter(
+    (line) => !adapter.isEchoedCommandLine(line, marker, command) && line.trim() !== MCP_PROMPT,
+  );
   let output = outputLines.join('\n').trim();
   if (output.startsWith(MCP_PROMPT)) {
     output = output.substring(MCP_PROMPT.length).trim();

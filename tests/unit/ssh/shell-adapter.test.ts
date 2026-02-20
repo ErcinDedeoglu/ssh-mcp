@@ -92,17 +92,20 @@ describe('CmdShellAdapter', () => {
     expect(cmds).toContain(`prompt ${MCP_PROMPT}`);
   });
 
-  it('wrapCommand uses & separator and %ERRORLEVEL%', () => {
+  it('wrapCommand sends command and wrapper on separate lines', () => {
     const wrapped = adapter.wrapCommand('dir', '__MARKER__');
-    expect(wrapped).toContain('dir &');
+    expect(wrapped).toContain('@dir\r\n');
     expect(wrapped).toContain('%ERRORLEVEL%');
     expect(wrapped).toContain('echo __MARKER__');
     expect(wrapped).toContain('%__MCP_EXIT%');
   });
 
-  it('isEchoedCommandLine detects cmd wrapper lines', () => {
+  it('isEchoedCommandLine detects cmd wrapper and echoed command lines', () => {
     expect(adapter.isEchoedCommandLine('set __MCP_EXIT=%ERRORLEVEL%', '__M__')).toBe(true);
+    expect(adapter.isEchoedCommandLine('echo __M__', '__M__')).toBe(true);
+    expect(adapter.isEchoedCommandLine('@dir', '__M__', 'dir')).toBe(true);
     expect(adapter.isEchoedCommandLine('real output', '__M__')).toBe(false);
+    expect(adapter.isEchoedCommandLine('real output', '__M__', 'dir')).toBe(false);
   });
 });
 
@@ -130,8 +133,9 @@ describe('parseMarkedOutput with different adapters', () => {
   it('parses cmd output correctly', () => {
     const adapter = createShellAdapter('cmd');
     const marker = '__MCP_END_test_abc__';
-    const buffer = `set __MCP_EXIT=%ERRORLEVEL% & echo. & echo ${marker} & call echo %__MCP_EXIT%\nWIN-SERVER\n${marker}\n0\n`;
-    const result = parseMarkedOutput(buffer, marker, adapter);
+    // cmd sends: @command\r\n, output, @set wrapper...\n, marker, exit code
+    const buffer = `@hostname\nWIN-SERVER\n@set __MCP_EXIT=%ERRORLEVEL% & echo. & echo ${marker} & call echo %__MCP_EXIT%\n\n${marker}\n0\n`;
+    const result = parseMarkedOutput(buffer, marker, adapter, 'hostname');
     expect(result).not.toBeNull();
     expect(result!.output).toBe('WIN-SERVER');
     expect(result!.exitCode).toBe(0);
