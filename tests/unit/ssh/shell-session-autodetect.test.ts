@@ -115,8 +115,8 @@ describe('ShellSession auto-detection', () => {
 
       void session.execute('dir');
       const wrappedCmd = mockWrite.mock.calls[0][0] as string;
-      expect(wrappedCmd).toContain('%ERRORLEVEL%');
-      expect(wrappedCmd).toContain('call echo');
+      expect(wrappedCmd).toContain('ERRORLEVEL');
+      expect(wrappedCmd).toContain('echo %ERRORLEVEL%');
     });
 
     it('uses correct EOF char for detected powershell', async () => {

@@ -2,7 +2,6 @@ import type { Client } from 'ssh2';
 import {
   DEFAULT_SHELL_TIMEOUT_MS,
   DEFAULT_STALL_TIMEOUT_MS,
-  STDIN_DELIVERY_DELAY_MS,
   MAX_OUTPUT_SIZE,
   generateMarker,
   parseMarkedOutput,
@@ -25,6 +24,7 @@ import {
   type TimerState,
 } from './shell-session-timers.js';
 import { createShellAdapter, detectShellType, type ShellAdapter } from './shell-adapter.js';
+import { writeCommand } from './shell-session-writer.js';
 export type { ShellExecuteResult, HistoryEntry, ExecuteOptions } from './shell-session.types.js';
 
 export class ShellSession {
@@ -160,16 +160,14 @@ export class ShellSession {
     startStallTimer(this.timers, cmd.stallTimeoutMs, () =>
       this.handleError(new Error(`Command stalled - no output for ${cmd.stallTimeoutMs}ms`)),
     );
-    const wrapped = this.adapter!.wrapCommand(cmd.command, cmd.marker);
-    this.stream.write(wrapped);
-    if (cmd.stdin !== undefined) {
-      // Delay so the shell starts the command before receiving stdin + EOF
-      setTimeout(() => {
-        if (!this.stream || !this.currentCommand) return;
-        this.stream.write(cmd.stdin!.endsWith('\n') ? cmd.stdin! : cmd.stdin + '\n');
-        this.stream.write(this.adapter!.eofChar);
-      }, STDIN_DELIVERY_DELAY_MS);
-    }
+    writeCommand({
+      stream: this.stream,
+      adapter: this.adapter!,
+      command: cmd.command,
+      marker: cmd.marker,
+      stdin: cmd.stdin,
+      isAlive: () => this.stream !== null && this.currentCommand !== null,
+    });
   }
   private resetStallTimer(): void {
     if (!this.currentCommand) return;
