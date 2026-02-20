@@ -63,12 +63,16 @@ describe.skipIf(!isDockerRunning())('E2E close_remote_forward Tool', () => {
       serverId: 'test-server-1',
       localHost: 'localhost',
       localPort: 8080,
-      remotePort: 19999,
+      remotePort: 0,
     });
 
+    if (forwardResult.isError) {
+      console.error('Forward failed:', forwardResult.content[0].text);
+    }
     expect(forwardResult.isError).toBeUndefined();
     const forwardParsed = JSON.parse(forwardResult.content[0].text);
     const boundPort = forwardParsed.remotePort;
+    expect(boundPort).toBeGreaterThan(0);
 
     expect(remoteForwardRegistry.get('test-server-1', '127.0.0.1', boundPort)).toBeDefined();
 
@@ -128,7 +132,7 @@ describe.skipIf(!isDockerRunning())('E2E close_remote_forward Tool', () => {
       localHost: 'localhost',
       localPort: 3000,
       remoteHost: '127.0.0.1',
-      remotePort: 18888,
+      remotePort: 0,
     });
 
     expect(forwardResult.isError).toBeUndefined();
@@ -171,7 +175,7 @@ describe.skipIf(!isDockerRunning())('E2E close_remote_forward Tool', () => {
       serverId: 'test-server-1',
       localHost: 'localhost',
       localPort: 5000,
-      remotePort: 17777,
+      remotePort: 0,
     });
 
     expect(forwardResult.isError).toBeUndefined();
