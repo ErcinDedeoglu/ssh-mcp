@@ -66,9 +66,6 @@ describe.skipIf(!isDockerRunning())('E2E close_remote_forward Tool', () => {
       remotePort: 0,
     });
 
-    if (forwardResult.isError) {
-      console.error('Forward failed:', forwardResult.content[0].text);
-    }
     expect(forwardResult.isError).toBeUndefined();
     const forwardParsed = JSON.parse(forwardResult.content[0].text);
     const boundPort = forwardParsed.remotePort;
