@@ -20,11 +20,11 @@
     "test:e2e:run": "vitest --run tests/e2e/**",
     "test:e2e:up": "docker compose -f docker-compose.test.yml up -d --wait",
     "test:e2e:down": "docker compose -f docker-compose.test.yml down",
-    "test:all": "npm run test && npm run test:e2e",
+    "test:all": "bun run test && bun run test:e2e",
     "lint": "eslint 'src/**/*.ts' 'tests/**/*.ts' && prettier --check 'src/**/*.ts' 'tests/**/*.ts' && tsc --noEmit -p tsconfig.eslint.json",
     "lint:fix": "eslint 'src/**/*.ts' 'tests/**/*.ts' --fix && prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
     "typecheck": "tsc --noEmit -p tsconfig.eslint.json",
-    "prepublishOnly": "npm run build && npm test -- --run",
+    "prepublishOnly": "bun run build && bun run test -- --run",
     "prepare": "husky"
   },
   "keywords": [
