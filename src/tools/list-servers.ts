@@ -1,25 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
-import { loadConfig } from '../config/loader.js';
 import type { ConnectionPool } from '../ssh/pool.js';
-import { sanitizeError } from './utils.js';
+import { listServers } from '../actions/list-servers.js';
+import { partialDeps } from './deps.js';
+import { toMcpResponse } from './mcp-response.js';
 
-export interface ServerInfo {
-  id: string;
-  host: string;
-  port: number;
-  username: string;
-  description?: string;
-  connected: boolean;
-}
-
-function refreshConfig(config: Config): void {
-  const fresh = loadConfig();
-  config.servers.length = 0;
-  config.servers.push(...fresh.servers);
-  if (fresh.keys) config.keys = fresh.keys;
-  if (fresh.defaults) config.defaults = fresh.defaults;
-}
+export type { ServerInfo } from '../actions/list-servers.js';
 
 export function registerListServersTool(
   server: McpServer,
@@ -31,36 +17,8 @@ export function registerListServersTool(
     'list_servers',
     'List all configured SSH servers with their connection status (auto-reloads config)',
     async () => {
-      try {
-        refreshConfig(config);
-        const servers: ServerInfo[] = config.servers.map((serverConfig) => ({
-          id: serverConfig.id,
-          host: serverConfig.host,
-          port: serverConfig.port,
-          username: serverConfig.username,
-          description: serverConfig.description,
-          connected: pool.get(serverConfig.id)?.isConnected ?? false,
-        }));
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify(servers, null, 2),
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: 'text' as const,
-              text: sanitizeError(error),
-            },
-          ],
-        };
-      }
+      const outcome = await listServers(partialDeps({ config, pool }));
+      return toMcpResponse(outcome);
     },
   );
 }

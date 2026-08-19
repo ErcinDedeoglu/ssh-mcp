@@ -1,15 +1,17 @@
 # ssh-mcp
 
-MCP server for SSH connection management and command execution. Define your servers once, let AI assistants manage them.
+MCP server and CLI for SSH connection management and command execution. Define your servers once, use them from AI assistants or your terminal.
 
 ## Features
 
+- **Dual-mode**: same binary runs as an MCP server (stdio) or a standalone CLI
 - **Auto-connect**: Tools automatically connect when needed - no manual `connect` calls required
 - Persistent SSH connections with keep-alive and auto-reconnection
 - Persistent shell sessions - working directory and environment variables persist across commands
 - Execute commands on remote servers
 - **Background execution**: Run long commands asynchronously with job tracking
 - Upload and download files via SFTP
+- Local and remote port forwarding (including through jump hosts)
 - Multi-server support with connection pooling
 - Secure credential storage with 0600 permission validation
 
@@ -136,6 +138,39 @@ execute(serverId, "git clone git@github.com:private/repo.git", { agentForward: t
 ```bash
 chmod 600 ~/.ssh-mcp/config.json
 ```
+
+## CLI Usage
+
+The same binary is a standalone CLI. Running with no arguments starts the MCP server
+(backwards compatible); pass any command to use the CLI:
+
+```bash
+ssh-mcp                        # MCP stdio server (no args = MCP mode)
+ssh-mcp mcp                    # explicit MCP mode
+ssh-mcp servers                # list configured servers
+ssh-mcp exec prod-web uptime   # run a command, exit code propagates
+ssh-mcp exec prod-web "systemctl status nginx" --json
+ssh-mcp exec prod-web "npm install" --bg          # detached background job
+ssh-mcp job check <jobId>                         # poll job status/output
+ssh-mcp job cancel <jobId>
+ssh-mcp upload prod-web ./app.tar.gz /tmp/
+ssh-mcp download prod-web /var/log/app.log ./logs/
+ssh-mcp status prod-web                           # connection health (auto-connects)
+ssh-mcp jump bastion prod-db "hostname"            # run via jump host
+ssh-mcp forward prod-db localhost 5432             # foreground tunnel, Ctrl-C stops
+ssh-mcp rforward prod-web localhost 3000           # expose local service remotely
+ssh-mcp forwards                                   # list CLI-managed forwards
+```
+
+Notes:
+
+- Every command supports `--json` for structured output (handy for scripts and agents).
+- `exec` joins arguments with spaces (like `ssh`); quote the command as one string when
+  it contains shell operators: `ssh-mcp exec srv "sh -c 'exit 7'"`.
+- Background jobs are persisted under `<config-dir>/jobs/` and survive across
+  invocations; `job check` streams their output.
+- MCP-only tools (`disconnect`, `get_console_history`) are session-scoped and have no
+  CLI equivalent; CLI `exec` is one-shot per invocation.
 
 ## MCP Client Integration
 

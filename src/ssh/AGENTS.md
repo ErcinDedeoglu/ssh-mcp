@@ -27,6 +27,7 @@ SSH connection management: SessionKeeper (connection lifecycle), ConnectionPool 
 | `shell-session-timers.ts`      | Timer state management (timeout + stall timers)                         |
 | `shell-registry.ts`            | ShellRegistry: Map of serverId → ShellSession                           |
 | `job-registry.ts`              | JobRegistry: background job tracking for execute_background             |
+| `job-store.ts`                 | JobStore: disk-backed job persistence for CLI background jobs           |
 | `forward-registry.ts`          | ForwardRegistry: tracks active local port forwards                      |
 | `local-forward.ts`             | createLocalForward(): net.Server + ssh2 forwardOut() wiring             |
 | `remote-forward.ts`            | createRemoteForward(): ssh2 forwardIn() wiring                          |
@@ -80,6 +81,7 @@ DISCONNECTED → connect() → CONNECTED
 | Task                          | Location                                               |
 | ----------------------------- | ------------------------------------------------------ |
 | Change reconnection timing    | `session.types.ts` calculateReconnectDelay()           |
+| Change disk job persistence   | `job-store.ts` JobStore (dir defaults next to config)  |
 | Add connection event          | `session.types.ts` SessionKeeperEvents interface       |
 | Change file size limit        | `sftp.ts` MAX_FILE_SIZE constant                       |
 | Change home dir expansion     | `sftp.ts` expandRemotePath(), resolveHomeDir()         |

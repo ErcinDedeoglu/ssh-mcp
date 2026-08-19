@@ -2,10 +2,9 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { RemoteForwardRegistry } from '../ssh/remote-forward-registry.js';
-import { closeRemoteForward } from '../ssh/remote-forward.js';
-import { sanitizeError } from './utils.js';
-
-const DEFAULT_REMOTE_HOST = '127.0.0.1';
+import { closeRemoteForwardAction } from '../actions/close-remote-forward.js';
+import { partialDeps } from './deps.js';
+import { toMcpResponse } from './mcp-response.js';
 
 export function registerCloseRemoteForwardTool(
   server: McpServer,
@@ -30,70 +29,12 @@ export function registerCloseRemoteForwardTool(
         .optional()
         .describe('Remote interface the forward is bound to (default: "127.0.0.1")'),
     },
-    async ({
-      serverId,
-      remotePort,
-      remoteHost,
-    }: {
-      serverId: string;
-      remotePort: number;
-      remoteHost?: string;
-    }) => {
-      const bindHost = remoteHost ?? DEFAULT_REMOTE_HOST;
-
-      try {
-        const forward = remoteForwardRegistry.get(serverId, bindHost, remotePort);
-
-        if (!forward) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `No active remote forward found for ${serverId} on ${bindHost}:${remotePort}`,
-              },
-            ],
-          };
-        }
-
-        const session = pool.get(serverId);
-        if (session?.isConnected) {
-          await closeRemoteForward(session.client, bindHost, forward.boundPort);
-        }
-
-        const forwardInfo = {
-          serverId: forward.serverId,
-          remoteHost: forward.remoteHost,
-          remotePort: forward.remotePort,
-          localHost: forward.localHost,
-          localPort: forward.localPort,
-          activeConnections: forward.activeChannels.size,
-        };
-
-        remoteForwardRegistry.remove(serverId, bindHost, remotePort);
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                status: 'closed',
-                ...forwardInfo,
-              }),
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: 'text' as const,
-              text: sanitizeError(error),
-            },
-          ],
-        };
-      }
+    async (input: { serverId: string; remotePort: number; remoteHost?: string }) => {
+      const outcome = await closeRemoteForwardAction(
+        input,
+        partialDeps({ pool, remoteForwardRegistry }),
+      );
+      return toMcpResponse(outcome);
     },
   );
 }

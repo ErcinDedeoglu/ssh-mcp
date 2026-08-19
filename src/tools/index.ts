@@ -23,7 +23,8 @@ import { registerCloseRemoteForwardTool } from './close-remote-forward.js';
 import { registerJumpConnectTool } from './jump-connect.js';
 import { registerGetConsoleHistoryTool } from './get-console-history.js';
 
-export { sanitizeError, sanitizePath } from './utils.js';
+export { sanitizeError, sanitizePath } from '../utils/sanitize.js';
+export { partialDeps } from './deps.js';
 
 export function registerAllTools(
   server: McpServer,

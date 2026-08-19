@@ -4,13 +4,16 @@
 
 ## Overview
 
-13 MCP tools. Each file exports `registerXxxTool()`, called from `index.ts`. Most tools auto-connect when needed via `ensureConnected()`.
+16 MCP tools. Each file is a **thin wrapper**: zod schema + `registerXxxTool()` that calls a shared action in `src/actions/` and maps the result via `toMcpResponse()`. Business logic lives in actions, NOT here. Most tools auto-connect when needed via `ensureConnected()`.
 
 | Tool                   | File                    | Parameters                                               | Auto-Connect |
 | ---------------------- | ----------------------- | -------------------------------------------------------- | ------------ |
 | `list_servers`         | list-servers.ts         | none                                                     | No           |
 | `disconnect`           | disconnect.ts           | serverId                                                 | No           |
 | `execute`              | execute.ts              | serverId, command, timeout?                              | Yes          |
+| `execute_background`   | execute-background.ts   | serverId, command, timeout?, stallTimeout?               | Yes          |
+| `check_job`            | check-job.ts            | jobId, maxOutputLength?                                  | No           |
+| `cancel_job`           | cancel-job.ts           | jobId                                                    | No           |
 | `get_console_history`  | get-console-history.ts  | serverId, limit?                                         | No           |
 | `upload`               | upload.ts               | serverId, localPath, remotePath                          | Yes          |
 | `download`             | download.ts             | serverId, remotePath, localPath                          | Yes          |
@@ -22,17 +25,20 @@
 | `close_remote_forward` | close-remote-forward.ts | serverId, remotePort, remoteHost?                        | No           |
 | `list_forwards`        | list-forwards.ts        | serverId?                                                | No           |
 
-Note: `ensure-connected.ts` is a **helper**, not a registered tool.
+Note: `ensure-connected.ts` and `utils.ts` are **re-export shims** (logic lives in `src/actions/` and `src/utils/`), `deps.ts` provides `partialDeps()`, `mcp-response.ts` provides `toMcpResponse()`.
 
 ## Adding a New Tool
 
-1. Create `src/tools/your-tool.ts`:
+1. Create the action in `src/actions/your-action.ts` (see `src/actions/AGENTS.md`) - typed input, `ActionOutcome` output, catch via `failureFrom()`.
+
+2. Create `src/tools/your-tool.ts`:
 
 ```typescript
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ConnectionPool } from '../ssh/pool.js';
-import { sanitizeError } from './utils.js';
+import { yourAction } from '../actions/your-action.js';
+import { partialDeps } from './deps.js';
+import { toMcpResponse } from './mcp-response.js';
 
 export function registerYourTool(server: McpServer, pool: ConnectionPool): void {
   // REQUIRED: `as any` cast - SDK types don't match runtime API
@@ -41,31 +47,28 @@ export function registerYourTool(server: McpServer, pool: ConnectionPool): void 
     'your_tool_name',
     'Tool description for LLM',
     { param1: z.string().describe('Description') },
-    async ({ param1 }: { param1: string }) => {
-      try {
-        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
-      } catch (error) {
-        return { isError: true, content: [{ type: 'text' as const, text: sanitizeError(error) }] };
-      }
+    async (input: { param1: string }) => {
+      return toMcpResponse(await yourAction(input, partialDeps({ pool })));
     },
   );
 }
 ```
 
-2. Register in `index.ts`: import, call in `registerAllTools()`, add to exports.
+3. Register in `index.ts`: import, call in `registerAllTools()`, add to exports.
 
 ## Response Format
 
+Mapped automatically by `toMcpResponse()` from the action outcome:
+
 - **Success**: `{ content: [{ type: 'text', text: JSON.stringify(data) }] }`
-- **Error**: `{ isError: true, content: [{ type: 'text', text: sanitizeError(error) }] }`
+- **Error**: `{ isError: true, content: [{ type: 'text', text: message-or-json }] }`
 
 ## Conventions
 
-- Zod schemas for ALL validation
-- `type: 'text' as const` required for TypeScript
-- Use `ensureConnected()` for tools that need a connection (auto-connects if needed)
-- Call `session.touch()` after operations to prevent idle timeout
-- Always `sanitizeError()` - redacts credentials
+- Zod schemas for ALL validation (stays in the tool wrapper)
+- `type: 'text' as const` handled by `mcp-response.ts`
+- Actions call `ensureConnected()` / `session.touch()` internally - wrappers never touch SSH directly
+- Errors sanitized inside actions via `failureFrom()`
 
 ## The `as any` Cast
 

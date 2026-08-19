@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
-import { sanitizeError } from './utils.js';
-
-const DEFAULT_LOCAL_HOST = '127.0.0.1';
+import { closeForward } from '../actions/close-forward.js';
+import { partialDeps } from './deps.js';
+import { toMcpResponse } from './mcp-response.js';
 
 export function registerCloseForwardTool(
   server: McpServer,
@@ -26,57 +26,9 @@ export function registerCloseForwardTool(
         .optional()
         .describe('Local interface the forward is bound to (default: "127.0.0.1")'),
     },
-    async ({ localPort, localHost }: { localPort: number; localHost?: string }) => {
-      const bindHost = localHost ?? DEFAULT_LOCAL_HOST;
-
-      try {
-        const forward = forwardRegistry.get(bindHost, localPort);
-
-        if (!forward) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `No active forward found on ${bindHost}:${localPort}`,
-              },
-            ],
-          };
-        }
-
-        const forwardInfo = {
-          serverId: forward.serverId,
-          localHost: forward.localHost,
-          localPort: forward.localPort,
-          remoteHost: forward.remoteHost,
-          remotePort: forward.remotePort,
-          activeConnections: forward.activeSockets.size,
-        };
-
-        forwardRegistry.remove(bindHost, localPort);
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                status: 'closed',
-                ...forwardInfo,
-              }),
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: 'text' as const,
-              text: sanitizeError(error),
-            },
-          ],
-        };
-      }
+    async (input: { localPort: number; localHost?: string }) => {
+      const outcome = await closeForward(input, partialDeps({ forwardRegistry }));
+      return toMcpResponse(outcome);
     },
   );
 }

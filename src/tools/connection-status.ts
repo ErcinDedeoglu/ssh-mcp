@@ -3,27 +3,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
-import { ping } from '../ssh/session-ping.io.js';
-import { ensureConnected, formatConnectionError } from './ensure-connected.js';
-import { sanitizeError } from './utils.js';
+import { connectionStatus } from '../actions/connection-status.js';
+import { partialDeps } from './deps.js';
+import { toMcpResponse } from './mcp-response.js';
 
-export interface ConnectionHealthStatus {
-  serverId: string;
-  connected: boolean;
-  idle: boolean;
-  idleWarning?: string;
-  reconnecting: boolean;
-  reconnectAttempt?: number;
-  lastActivityMs: number;
-  lastActivityAgo: string;
-}
-
-export function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${Math.floor(ms / 1000)}s`;
-  if (ms < 3600000) return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
-  return `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
-}
+export { formatDuration } from '../actions/connection-status.js';
+export type { ConnectionHealthStatus } from '../actions/connection-status.js';
 
 export function registerConnectionStatusTool(
   server: McpServer,
@@ -36,58 +21,9 @@ export function registerConnectionStatusTool(
     'connection_status',
     'Check the health and status of an SSH connection. Auto-connects if not already connected. NOTE: This is a read-only check and does NOT reset the idle timer.',
     { serverId: z.string().describe('Unique identifier of the server to check connection health') },
-    async ({ serverId }: { serverId: string }) => {
-      try {
-        const connectionResult = await ensureConnected(serverId, { config, pool, forwardRegistry });
-        if (!connectionResult.success) {
-          return formatConnectionError(connectionResult.errorInfo);
-        }
-
-        const { session } = connectionResult;
-
-        const health = session.healthCheck();
-        const isAlive = health.connected ? await ping(session.client) : false;
-        const now = Date.now();
-        const lastActivityAgo =
-          health.lastActivity > 0 ? formatDuration(now - health.lastActivity) : 'never';
-
-        const status: ConnectionHealthStatus = {
-          serverId,
-          connected: isAlive,
-          idle: health.idle,
-          reconnecting: health.reconnecting,
-          lastActivityMs: health.lastActivity,
-          lastActivityAgo,
-        };
-
-        if (health.idle) {
-          status.idleWarning =
-            'Connection has been idle for >15 minutes. Run a command to reset the idle timer.';
-        }
-
-        if (health.reconnectAttempt !== undefined) {
-          status.reconnectAttempt = health.reconnectAttempt;
-        }
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify(status),
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: 'text' as const,
-              text: sanitizeError(error),
-            },
-          ],
-        };
-      }
+    async (input: { serverId: string }) => {
+      const outcome = await connectionStatus(input, partialDeps({ config, pool, forwardRegistry }));
+      return toMcpResponse(outcome);
     },
   );
 }

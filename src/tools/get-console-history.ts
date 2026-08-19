@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ShellRegistry } from '../ssh/shell-registry.js';
-import { sanitizeError } from './utils.js';
+import { getConsoleHistory } from '../actions/get-console-history.js';
+import { partialDeps } from './deps.js';
+import { toMcpResponse } from './mcp-response.js';
 
 export function registerGetConsoleHistoryTool(
   server: McpServer,
@@ -18,36 +20,9 @@ export function registerGetConsoleHistoryTool(
         .optional()
         .describe('Maximum number of history entries to return (default: all, max stored: 100)'),
     },
-    async ({ serverId, limit }: { serverId: string; limit?: number }) => {
-      try {
-        const shell = shellRegistry.get(serverId);
-        if (!shell) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: `No shell session for server '${serverId}'. Execute a command first.`,
-              },
-            ],
-          };
-        }
-
-        const history = shell.getHistory(limit);
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({ serverId, count: history.length, history }),
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          isError: true,
-          content: [{ type: 'text' as const, text: sanitizeError(error) }],
-        };
-      }
+    async (input: { serverId: string; limit?: number }) => {
+      const outcome = await getConsoleHistory(input, partialDeps({ shellRegistry }));
+      return toMcpResponse(outcome);
     },
   );
 }

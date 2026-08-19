@@ -3,12 +3,9 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
-import { createLocalForward } from '../ssh/local-forward.js';
-import { ensureConnected, formatConnectionError } from './ensure-connected.js';
-import { sanitizeError } from './utils.js';
-
-const DEFAULT_LOCAL_HOST = '127.0.0.1';
-const DEFAULT_LOCAL_PORT = 0;
+import { forwardPort } from '../actions/forward-port.js';
+import { partialDeps } from './deps.js';
+import { toMcpResponse } from './mcp-response.js';
 
 export function registerForwardPortTool(
   server: McpServer,
@@ -47,71 +44,15 @@ export function registerForwardPortTool(
         .optional()
         .describe('Local port to listen on (default: 0 for auto-assign, or specify like 15432)'),
     },
-    async ({
-      serverId,
-      remoteHost,
-      remotePort,
-      localHost,
-      localPort,
-    }: {
+    async (input: {
       serverId: string;
       remoteHost: string;
       remotePort: number;
       localHost?: string;
       localPort?: number;
     }) => {
-      const bindHost = localHost ?? DEFAULT_LOCAL_HOST;
-      const bindPort = localPort ?? DEFAULT_LOCAL_PORT;
-
-      try {
-        const connectionResult = await ensureConnected(serverId, { config, pool, forwardRegistry });
-        if (!connectionResult.success) {
-          return formatConnectionError(connectionResult.errorInfo);
-        }
-
-        const { session } = connectionResult;
-
-        const result = await createLocalForward(
-          {
-            client: session.client,
-            serverId,
-            localHost: bindHost,
-            localPort: bindPort,
-            remoteHost,
-            remotePort,
-          },
-          forwardRegistry,
-        );
-
-        session.touch();
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                status: 'forwarding',
-                serverId,
-                localHost: result.localHost,
-                localPort: result.localPort,
-                remoteHost,
-                remotePort,
-                connectionString: `${result.localHost}:${result.localPort} -> ${remoteHost}:${remotePort}`,
-              }),
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: 'text' as const,
-              text: sanitizeError(error),
-            },
-          ],
-        };
-      }
+      const outcome = await forwardPort(input, partialDeps({ config, pool, forwardRegistry }));
+      return toMcpResponse(outcome);
     },
   );
 }

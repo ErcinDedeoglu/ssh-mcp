@@ -3,9 +3,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Config } from '../config/types.js';
 import { ConnectionPool } from '../ssh/pool.js';
 import { ForwardRegistry } from '../ssh/forward-registry.js';
-import { FileTransfer, MAX_FILE_SIZE } from '../ssh/sftp.js';
-import { ensureConnected, formatConnectionError } from './ensure-connected.js';
-import { sanitizeError, sanitizePath } from './utils.js';
+import { MAX_FILE_SIZE } from '../ssh/sftp.js';
+import { uploadFile } from '../actions/upload.js';
+import { partialDeps } from './deps.js';
+import { toMcpResponse } from './mcp-response.js';
 
 export function registerUploadTool(
   server: McpServer,
@@ -24,51 +25,9 @@ export function registerUploadTool(
         .string()
         .describe('Destination path on the remote server (supports ~ for home directory)'),
     },
-    async ({
-      serverId,
-      localPath,
-      remotePath,
-    }: {
-      serverId: string;
-      localPath: string;
-      remotePath: string;
-    }) => {
-      try {
-        const connectionResult = await ensureConnected(serverId, { config, pool, forwardRegistry });
-        if (!connectionResult.success) {
-          return formatConnectionError(connectionResult.errorInfo);
-        }
-
-        const { session } = connectionResult;
-
-        const fileTransfer = new FileTransfer(session);
-        await fileTransfer.upload(localPath, remotePath);
-        session.touch();
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                status: 'uploaded',
-                serverId,
-                localPath: sanitizePath(localPath),
-                remotePath,
-              }),
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: 'text' as const,
-              text: sanitizeError(error),
-            },
-          ],
-        };
-      }
+    async (input: { serverId: string; localPath: string; remotePath: string }) => {
+      const outcome = await uploadFile(input, partialDeps({ config, pool, forwardRegistry }));
+      return toMcpResponse(outcome);
     },
   );
 }

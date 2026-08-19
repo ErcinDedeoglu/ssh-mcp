@@ -4,14 +4,27 @@
 
 ## Overview
 
-MCP server exposing 13 SSH tools (execute, upload/download, port forwarding, jump hosts, etc.) via stdio transport. Uses ssh2 library with connection pooling, auto-connect, and auto-reconnection.
+Dual-mode SSH tool: MCP server (16 SSH tools via stdio) AND standalone CLI (exec, transfer, forwarding, background jobs). Uses ssh2 library with connection pooling, auto-connect, and auto-reconnection. Both frontends share one business-logic layer (`src/actions/`).
 
 ## Structure
 
 ```
 src/
-├── index.ts          # Entry: loads config, creates SSHMCPServer, runs
+├── index.ts          # Entry: dual-mode dispatch - no args/`mcp` = stdio server, else CLI
+├── server-entry.ts   # runMcpServer(): config load + SSHMCPServer + signal handlers
 ├── server.ts         # SSHMCPServer class: wires McpServer + ConnectionPool + tools
+├── actions/          # See src/actions/AGENTS.md - shared business logic (MCP-free)
+│   └── *.ts          # 16 actions: typed input → ActionOutcome, deps injected
+├── cli/              # See src/cli/AGENTS.md - commander CLI (one-shot per invocation)
+│   ├── main.ts       # runCli(argv): command tree + hidden run-job runner entry
+│   ├── context.ts    # buildCliDeps() / cleanupCli()
+│   ├── job-launch.ts # exec --bg: detached runner spawn
+│   ├── job-runner.ts # runner child: execute → stream to JobStore
+│   ├── forward-store.ts # CLI forward tracking (forwards.json, pid liveness)
+│   ├── output.ts     # report(): ActionOutcome → stdout/stderr + exit code
+│   └── commands/     # exec, job, transfer, connection, forward command families
+├── utils/
+│   └── sanitize.ts   # sanitizeError / sanitizePath / truncateOutput (shared)
 ├── config/
 │   ├── loader.ts     # loadConfig(): JSON Schema validation via AJV, 0600 permission check
 │   ├── path.ts       # getConfigPath(), expandHome() - shared config path utilities
@@ -34,7 +47,8 @@ src/
 │   ├── shell-session-history.ts # ShellHistory: command history tracking with truncation
 │   ├── shell-session-timers.ts # Timer state management (timeout + stall timers)
 │   ├── shell-registry.ts       # ShellRegistry: Map of serverId → ShellSession
-│   ├── job-registry.ts         # JobRegistry: background job tracking for execute_background
+│   ├── job-registry.ts         # JobRegistry: in-memory job tracking for execute_background
+│   ├── job-store.ts            # JobStore: disk-backed job persistence for CLI bg jobs
 │   ├── forward-registry.ts     # ForwardRegistry: tracks active port forwards
 │   ├── local-forward.ts        # createLocalForward(): net.Server + ssh2 forwardOut()
 │   ├── remote-forward.ts       # createRemoteForward(): ssh2 forwardIn() wiring
@@ -43,7 +57,7 @@ src/
 │   ├── sftp.ts                 # FileTransfer: upload/download with 100MB limit, cross-platform ~
 │   └── connection.ts           # DEAD CODE - ignore
 └── tools/            # See src/tools/AGENTS.md
-    └── *.ts          # 13 MCP tools, each registerXxxTool()
+    └── *.ts          # 16 MCP tool wrappers (schema + register) over actions/
 
 tests/
 ├── unit/             # Vitest mocks, no network
@@ -56,7 +70,9 @@ tests/
 
 | Task                         | Location                                                                               |
 | ---------------------------- | -------------------------------------------------------------------------------------- |
-| Add new MCP tool             | `src/tools/` - see subdirectory AGENTS.md                                              |
+| Add new MCP tool             | `src/tools/` + action in `src/actions/` - see subdirectory AGENTS.md                   |
+| Add new CLI command          | `src/cli/commands/` + register in `src/cli/main.ts`                                    |
+| Change shared tool/CLI logic | `src/actions/` - single source of truth for both frontends                            |
 | Change connection behavior   | `src/ssh/session.ts` SessionKeeper class                                               |
 | Modify reconnection logic    | `src/ssh/session.ts` startReconnection(), `session.types.ts` calculateReconnectDelay() |
 | Change file transfer limits  | `src/ssh/sftp.ts` MAX_FILE_SIZE constant                                               |
@@ -71,17 +87,21 @@ tests/
 | Add shell type adapter       | `src/ssh/shell-adapter*.ts` - interface + per-shell implementations                    |
 | Change shell auto-detection  | `src/ssh/shell-adapter.ts` detectShellType()                                           |
 | Jump host connections        | `src/ssh/jump-stream.ts` createJumpStream()                                            |
+| CLI background jobs          | `src/cli/job-launch.ts` + `src/cli/job-runner.ts` + `src/ssh/job-store.ts`             |
+| Change dual-mode dispatch    | `src/index.ts` main() - no args/`mcp` = MCP, else CLI                                  |
 | Add E2E tests                | `tests/e2e/ssh/` - see subdirectory AGENTS.md                                          |
 
 ## Code Map
 
 | Class             | Purpose                                        | Key Methods                                      |
 | ----------------- | ---------------------------------------------- | ------------------------------------------------ |
-| `SSHMCPServer`    | Main server, wires everything                  | `run()`, `shutdown()`                            |
+| `SSHMCPServer`    | Main MCP server, wires everything              | `run()`, `shutdown()`                            |
 | `SessionKeeper`   | Single SSH connection with keepalive/reconnect | `connect()`, `disconnect()`, `healthCheck()`     |
 | `ConnectionPool`  | Manages multiple SessionKeepers                | `add()`, `get()`, `remove()`, `clear()`          |
 | `FileTransfer`    | SFTP operations                                | `upload()`, `download()`                         |
 | `ForwardRegistry` | Tracks active port forwards                    | `add()`, `get()`, `remove()`, `removeByServer()` |
+| `JobRegistry`     | In-memory background jobs (MCP mode)           | `create()`, `get()`, `setResult()`, `appendOutput()` |
+| `JobStore`        | Disk-backed background jobs (CLI mode)         | `save()`, `read()`, `appendOutput()`, `list()`   |
 
 ### SessionKeeper Events
 
@@ -96,12 +116,13 @@ tests/
 
 **Config Path**: `~/.ssh-mcp/config.json` with mandatory 0600 permissions.
 
-**Error Handling**: All tool errors go through `sanitizeError()` - never expose credentials.
+**Error Handling**: All tool/CLI errors go through `sanitizeError()` - never expose credentials.
 
 **Validation Stack**:
 
 - Config: AJV JSON Schema (`src/config/loader.ts`)
-- Tool inputs: Zod schemas (each tool file)
+- MCP tool inputs: Zod schemas (each tool file)
+- CLI inputs: commander parsing (validated in command layer)
 
 **200-Line Limit**: Custom ESLint rule enforces max 200 lines per file.
 
@@ -124,6 +145,8 @@ tests/
 
 **Home Directory Expansion**: `expandRemotePath()` in sftp.ts uses `sftp.realpath('.')` for cross-platform `~` expansion (Linux, macOS, Windows). Falls back to `/home/${username}` if `realpath` fails.
 
+**CLI One-Shot Semantics**: Each CLI invocation builds fresh deps and disconnects at the end - no cwd/env persistence between `exec` calls (MCP keeps persistent shells). `exec` joins args with spaces like `ssh`; quote as one string for shell operators. Long-lived features have CLI-specific process models: foreground forwards (Ctrl-C stops, tracked in `forwards.json` by pid) and detached background jobs (`exec --bg` → runner child, persisted in `<config-dir>/jobs/`).
+
 ## Commands
 
 ```bash
@@ -135,6 +158,7 @@ bun run test:all                # Unit + E2E
 bun run build                   # TypeScript → dist/
 bun run lint                    # ESLint + Prettier + typecheck
 bun run typecheck               # tsc --noEmit
+node dist/index.js --help       # CLI help (build first)
 ```
 
 ## Testing Notes
