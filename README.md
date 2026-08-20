@@ -17,23 +17,18 @@ MCP server and CLI for SSH connection management and command execution. Define y
 
 ## Installation
 
-Install globally straight from GitHub (not yet published to npm). Release tags ship prebuilt `dist/`, so no build scripts run on install:
-
 ```bash
-bun add -g github:ErcinDedeoglu/ssh-mcp   # recommended
+npm install -g ssh-mcp-cli
 ssh-mcp --help
 ```
 
-npm works too (npm 12+ gates git deps behind `allow-git` — allow it once per project or globally):
+Works with any package manager (`bun add -g ssh-mcp-cli`, `pnpm add -g ssh-mcp-cli`, `yarn global add ssh-mcp-cli`) and one-shot via `npx ssh-mcp-cli servers`.
+
+Alternative while offline from npm - install from GitHub (release tags ship prebuilt `dist/`, no build scripts run):
 
 ```bash
-npm config set allow-git root              # one-time (npm 12+ only)
-npm install -g github:ErcinDedeoglu/ssh-mcp
+bun add -g github:ErcinDedeoglu/ssh-mcp
 ```
-
-One-shot without installing: `bunx github:ErcinDedeoglu/ssh-mcp servers`
-
-Updates: reinstall pinned to a tag (`#v1.2.0`).
 
 Developing locally: clone, `bun install`, `bun run build`, then `npm link` to expose the `ssh-mcp` command.
 
