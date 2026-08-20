@@ -16,7 +16,7 @@ jobs:
       - run: bun run test
 
   publish:
-    name: Publish to npm
+    name: Publish to npm (trusted publishing)
     needs: verify
     runs-on: ubuntu-latest
     environment: npm
@@ -27,15 +27,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
+      # Trusted publishing (OIDC) requires npm >= 11.5
+      - run: npm install -g npm@latest
       - run: npm install
       # Tag snapshots carry prebuilt dist/ - build only as a safety net
       - run: npm run build
       - name: Publish
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub release
         run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
         env:
