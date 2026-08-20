@@ -25,23 +25,32 @@ Run commands, transfer files, and forward ports on user-configured SSH servers v
 
 ```bash
 ssh-mcp servers [--json]                     # list servers: id, host, port, username, connected
+ssh-mcp status <id> [--json]                 # connection health (auto-connects)
+  # → connected, idle, idleWarning, reconnecting, reconnectAttempt,
+  #   lastActivityMs, lastActivityAgo (human string)
 ssh-mcp exec <id> <cmd...> [--json]          # run command; exit code propagates
   --timeout <sec>                            # command timeout (default 60)
   --stall-timeout <sec>                      # 0 = allow silent long-runners
+  --max-output <chars>                       # truncate stdout beyond N chars (default 10000)
   --stdin                                    # pipe local stdin to remote command
   --bg [--stall-timeout 0]                   # detach as background job → prints jobId
   --agent-forward                            # forward local SSH agent (git pulls etc.)
 ssh-mcp job list [serverId] [--json]         # list jobs (status + runner liveness)
 ssh-mcp job check <jobId> [--json]           # poll: status, partialOutput, result, elapsedMs
+  [--max-output <chars>]
 ssh-mcp job cancel <jobId>                   # SIGTERM the runner
 ssh-mcp upload <id> <local> <remote>         # SFTP up (100MB limit, ~ supported)
 ssh-mcp download <id> <remote> <local>       # SFTP down
-ssh-mcp status <id> [--json]                 # connection health (auto-connects)
 ssh-mcp jump <jumpId> <targetId> [cmd...]    # connect via bastion, optional command
-ssh-mcp forward <id> <remoteHost> <port>     # foreground tunnel (--local-port, --via <jumpId>)
-ssh-mcp rforward <id> <localHost> <port>     # expose local service remotely
-ssh-mcp forwards [--json]                    # list CLI-managed tunnels
-ssh-mcp forward-close <localPort>            # stop a tunnel
+ssh-mcp forward <id> <remoteHost> <remotePort>   # foreground tunnel
+  [--local-host <iface>] [--local-port <port>]   # defaults: 127.0.0.1, auto-assign
+  [--via <jumpId>]                               # tunnel through bastion
+ssh-mcp rforward <id> <localHost> <localPort>    # expose local service remotely
+  [--remote-host <iface>] [--remote-port <port>] # bind on server (defaults 127.0.0.1, auto)
+ssh-mcp forwards [--json]                    # list CLI-managed tunnels (kind, route, pid)
+ssh-mcp forward-close <localPort> [--local-host <iface>]   # stop a local tunnel
+ssh-mcp rforward-close <id> <remotePort> [--remote-host <iface>]  # stop a remote tunnel
+ssh-mcp update [--json]                      # manual self-update (also auto-updates 1x/24h)
 ```
 
 ### Background Job Pattern (>5min tasks)
@@ -66,10 +75,11 @@ Poll every 10-30s (not in a tight loop). Jobs survive the CLI exiting; `msSinceL
 
 ### Config Facts
 
-- Central: `~/.ssh-mcp/config.json` (0600 enforced). Project overlay: `.ssh-mcp.json` walked up from CWD (overrides servers by id).
+- Central: `~/.ssh-mcp/config.json` (0600 enforced). Project overlay: `.ssh-mcp.json` walked up from CWD — servers override by id, keys/defaults merge; disabled when config is pinned.
 - `SSH_MCP_CONFIG=<path>` env or `--config <path>` pin the config explicitly.
 - One-shot per invocation: no cwd/env persistence between `exec` calls. Chain with `&&` in one quoted command when state matters.
-- No `ssh-mcp` binary? `npm install -g ssh-mcp-cli` (or it may self-install: `ssh-mcp update`).
+- Self-updates automatically at most once/24h (background, never blocks). Opt out: `SSH_MCP_AUTO_UPDATE=0`. State: `~/.ssh-mcp/update-state.json`.
+- No `ssh-mcp` binary? `npm install -g ssh-mcp-cli` (package name differs from bin name).
 
 ### Hard Limits
 
