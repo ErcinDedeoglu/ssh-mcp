@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ssh-mcp update` self-update command (detects npm/bun, reinstalls latest)
+- Update nudge on --help when a newer version exists
+
+### Added
+
 - Git-based install support:  (prepare script now builds dist/ on install)
 
 ## [1.1.4] - 2026-08-20

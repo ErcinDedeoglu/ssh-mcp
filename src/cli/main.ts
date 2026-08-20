@@ -7,6 +7,7 @@ import { registerJobCommand } from './commands/job.js';
 import { registerTransferCommands } from './commands/transfer.js';
 import { registerConnectionCommands } from './commands/connection.js';
 import { registerForwardCommands } from './commands/forward.js';
+import { registerUpdateCommand, notifyUpdate } from './commands/update.js';
 import { runJob } from './job-runner.js';
 
 function resolveVersion(): string {
@@ -35,6 +36,7 @@ export async function runCli(argv: string[]): Promise<number> {
   registerTransferCommands(program);
   registerForwardCommands(program);
   registerJobCommand(program);
+  registerUpdateCommand(program);
 
   program
     .command('mcp', { hidden: true })
@@ -69,5 +71,12 @@ export async function runCli(argv: string[]): Promise<number> {
     );
 
   await program.parseAsync(argv, { from: 'user' });
+
+  // Update nudge only for non-output invocations (--help, unknown command)
+  const command = program.commands.find((c) => c.name() === program.args[0]);
+  if (argv.includes('--help') || argv.includes('-h') || (program.args.length > 0 && !command)) {
+    await notifyUpdate(program);
+  }
+
   return Number(process.exitCode ?? 0);
 }
