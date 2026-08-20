@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { registerExecCommand } from './commands/exec.js';
 import { registerJobCommand } from './commands/job.js';
@@ -6,7 +9,17 @@ import { registerConnectionCommands } from './commands/connection.js';
 import { registerForwardCommands } from './commands/forward.js';
 import { runJob } from './job-runner.js';
 
-const VERSION = '1.0.0';
+function resolveVersion(): string {
+  try {
+    const pkgPath = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../package.json',
+    );
+    return JSON.parse(readFileSync(pkgPath, 'utf-8')).version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
 
 export async function runCli(argv: string[]): Promise<number> {
   const program = new Command();
@@ -14,7 +27,7 @@ export async function runCli(argv: string[]): Promise<number> {
   program
     .name('ssh-mcp')
     .description('SSH automation CLI - execute commands, transfer files, forward ports')
-    .version(VERSION)
+    .version(resolveVersion())
     .option('--json', 'machine-readable JSON output');
 
   registerConnectionCommands(program);
