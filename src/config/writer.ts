@@ -5,6 +5,7 @@
 import * as fs from 'node:fs';
 import type { ConcreteShellType } from './types.js';
 import { getConfigPath } from './path.js';
+import { getServerConfigPath } from './loader.js';
 
 interface RawServerEntry {
   id?: string;
@@ -27,7 +28,8 @@ interface RawConfig {
  */
 export function persistShellType(serverId: string, shellType: ConcreteShellType): void {
   try {
-    const configPath = getConfigPath();
+    // Write back to whichever file defines this server (project or primary)
+    const configPath = getServerConfigPath(serverId) ?? getConfigPath();
     const content = fs.readFileSync(configPath, 'utf-8');
     const raw: RawConfig = JSON.parse(content);
 

@@ -54,6 +54,25 @@ By default, the config file is at `~/.ssh-mcp/config.json`. You can override thi
 
 Priority: CLI arg > env var > default. The `~` expands to home directory on all platforms.
 
+### Project-level config (`.ssh-mcp.json`)
+
+Per-project server overrides: drop a `.ssh-mcp.json` in your project root (discovered walking up from the current directory, git-style). It merges over your central config:
+
+- **servers** override by `id` — project entries win, new ids are appended
+- **keys** merge by name, project wins
+- **defaults** merge per-field
+- shell-type persistence writes back to whichever file owns the server
+
+```json
+{ "servers": [ { "id": "staging", "host": "10.0.0.9", "port": 22, "username": "deploy", "auth": { "password": "..." } } ] }
+```
+
+Notes:
+- Same rules as the central file: JSON Schema validated, **0600 permissions enforced** — `chmod 600 .ssh-mcp.json`
+- **Add `.ssh-mcp.json` to `.gitignore`** if it contains credentials
+- Explicit `--config` / `SSH_MCP_CONFIG` disables project discovery entirely
+- Runtime state (jobs, forwards, update state) always stays in `~/.ssh-mcp/` — project dirs never accumulate runtime files
+
 ### Config file format
 
 ```json

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Project-level config overlay: `.ssh-mcp.json` discovered walking up from CWD,
+  merges over central config (servers by id, keys, defaults); 0600 enforced;
+  disabled by explicit --config/SSH_MCP_CONFIG; runtime state stays central
 - `ssh-mcp update` self-update command (detects npm/bun, reinstalls latest)
 - Update nudge on --help when a newer version exists
 
