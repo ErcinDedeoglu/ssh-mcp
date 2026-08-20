@@ -153,5 +153,39 @@ describe('auto-update', () => {
       expect(action).toBe('skipped:throttled');
       expect(checkForUpdateMock).toHaveBeenCalledTimes(1);
     });
+
+    it('reports skipped:error when spawning the updater child throws', async () => {
+      checkForUpdateMock.mockResolvedValue({
+        currentVersion: '1.0.0',
+        latestVersion: '2.0.0',
+        updateAvailable: true,
+      });
+      spawnMock.mockImplementation(() => {
+        throw new Error('EAGAIN');
+      });
+
+      const action = await maybeAutoUpdate();
+
+      expect(action).toBe('skipped:error');
+      // lastCheckAt recorded, but no lastSpawnedVersion since spawn failed
+      const state = readAutoUpdateState(stateFilePath());
+      expect(state?.lastCheckAt).toBeGreaterThan(0);
+      expect(state?.lastSpawnedVersion).toBeUndefined();
+    });
+
+    it('treats a corrupt state file as no state (fresh check)', async () => {
+      fs.writeFileSync(stateFilePath(), '{not valid json');
+      checkForUpdateMock.mockResolvedValue({
+        currentVersion: '1.0.0',
+        latestVersion: '1.0.0',
+        updateAvailable: false,
+      });
+
+      const action = await maybeAutoUpdate();
+
+      expect(action).toBe('skipped:current');
+      // And the corrupt file is replaced with valid state
+      expect(readAutoUpdateState(stateFilePath())?.lastCheckAt).toBeGreaterThan(0);
+    });
   });
 });
