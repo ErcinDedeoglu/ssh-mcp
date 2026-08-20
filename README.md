@@ -17,11 +17,24 @@ MCP server and CLI for SSH connection management and command execution. Define y
 
 ## Installation
 
+Install globally straight from GitHub (not yet published to npm):
+
 ```bash
-npm install ssh-mcp
+npm install -g github:DublokSoftware/ssh-mcp
+ssh-mcp --help
 ```
 
-**Requirements:** Node.js 22+
+Or run one-shot without installing:
+
+```bash
+npx github:DublokSoftware/ssh-mcp servers
+```
+
+Works with bun/pnpm/yarn git URLs too (`bun add -g github:DublokSoftware/ssh-mcp`). Updates: `npm update -g ssh-mcp` or reinstall pinned to a tag (`#v1.1.1`).
+
+Developing locally: clone, `bun install`, `bun run build`, then `npm link` to expose the `ssh-mcp` command.
+
+**Requirements:** Node.js 22+ locally. Remote servers: Linux, macOS, Windows (bash/zsh, PowerShell, cmd.exe). Windows local caveat: `job cancel` / `forward-close` can't deliver cross-process signals, so they hard-terminate the runner/forward instead of a graceful shutdown.
 
 ## Configuration
 
