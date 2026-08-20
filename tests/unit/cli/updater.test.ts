@@ -70,7 +70,7 @@ describe('updater', () => {
 
       expect(spawnMock).toHaveBeenCalledWith(
         'npm',
-        ['install', '-g', 'ssh-mcp-cli@latest'],
+        ['install', '-g', '--prefer-online', 'ssh-mcp-cli@latest'],
         expect.anything(),
       );
       expect(result.toVersion).toBe('99.0.0');
