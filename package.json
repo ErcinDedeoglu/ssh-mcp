@@ -1,6 +1,6 @@
 {
   "name": "ssh-mcp-cli",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "description": "Dual-mode SSH automation: MCP server and CLI (exec, transfers, port forwarding, background jobs)",
   "main": "dist/index.js",
   "bin": {
