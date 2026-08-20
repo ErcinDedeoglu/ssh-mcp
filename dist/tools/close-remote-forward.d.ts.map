@@ -1,0 +1,1 @@
+{"version":3,"file":"close-remote-forward.d.ts","sourceRoot":"","sources":["../../src/tools/close-remote-forward.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AACzE,OAAO,EAAE,cAAc,EAAE,MAAM,gBAAgB,CAAC;AAChD,OAAO,EAAE,qBAAqB,EAAE,MAAM,mCAAmC,CAAC;AAK1E,wBAAgB,8BAA8B,CAC5C,MAAM,EAAE,SAAS,EACjB,IAAI,EAAE,cAAc,EACpB,qBAAqB,EAAE,qBAAqB,GAC3C,IAAI,CA2BN"}
