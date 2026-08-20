@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Git-based install support:  (prepare script now builds dist/ on install)
 
+## [1.1.4] - 2026-08-20
+
+### Fixed
+
+- Ship config.schema.json in the npm tarball (ENOENT crash on loadConfig)
+
+### Changed
+
+- Published to npm as ssh-mcp-cli (bin stays ssh-mcp)
+
 ## [1.1.0] - 2026-08-20
 
 ### Added
