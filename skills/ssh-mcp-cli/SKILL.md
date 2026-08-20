@@ -1,6 +1,6 @@
 ---
 name: ssh-mcp-cli
-version: 1.4.0
+version: 1.4.2
 description: ssh-mcp CLI — MUST USE when the user mentions SSH, ssh-mcp, remote servers, or asks to run commands on, upload/download files to, check status of, or port-forward to remote/server machines via the ssh-mcp tool. Covers exec (foreground + background jobs), SFTP transfers, connection status, jump hosts, port forwarding, and server config discovery.
 requires:
   bins: ["ssh-mcp"]
@@ -12,11 +12,23 @@ Run commands, transfer files, and forward ports on user-configured SSH servers v
 
 ## Version Guard — read this first
 
-This guide matches the CLI version in the frontmatter. Before relying on the reference:
+This guide is version-matched to the `version:` in the frontmatter. Before relying on the reference, sync skill and binary — never use a mismatched copy silently:
 
-1. Run `ssh-mcp --version`. If it differs from the version above, this copy may be outdated.
-2. Refresh it from the installed binary: `ssh-mcp skill > <this-skill-dir>/SKILL.md` (the command prints the version-matched guide shipped inside the package).
-3. Or verify specifics live: every command supports `--help`, and unknown commands/flags will error rather than silently misbehave.
+1. **Compare**: `ssh-mcp --version` vs the frontmatter `version:` above.
+2. **If they differ, fix both directions:**
+   - **Binary newer** (frontmatter < binary): the binary carries the current guide — refresh this file: `ssh-mcp skill > <skill-path>`
+   - **Binary older** (frontmatter > binary): bring the binary up first: `ssh-mcp update` — then refresh this file as above.
+3. **Locate `<skill-path>`** — the file you loaded this skill from. If unknown, find every copy and update them all (agents often mirror the same file):
+
+   ```bash
+   ls ~/.config/opencode/skills/ssh-mcp-cli/SKILL.md \
+      ~/.claude/skills/ssh-mcp-cli/SKILL.md 2>/dev/null
+   ssh-mcp skill > <each matching path>
+   ```
+
+   None found? Install a fresh copy: `mkdir -p ~/.config/opencode/skills/ssh-mcp-cli && ssh-mcp skill > ~/.config/opencode/skills/ssh-mcp-cli/SKILL.md`
+4. **`ssh-mcp` binary missing?** `npm install -g ssh-mcp-cli` (package name differs from the `ssh-mcp` bin), then refresh as above.
+5. Stale copies **fail safe**: unknown commands/flags error loudly and every command supports `--help` — so verify anything suspicious against live help instead of trusting the file.
 
 ## Agent Guidance
 
