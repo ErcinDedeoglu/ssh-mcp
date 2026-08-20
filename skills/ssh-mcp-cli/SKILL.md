@@ -10,6 +10,14 @@ requires:
 
 Run commands, transfer files, and forward ports on user-configured SSH servers via `ssh-mcp`. Servers are defined in config (`~/.ssh-mcp/config.json`, plus optional per-project `.ssh-mcp.json` overlay) — never ask the user for host/credentials; discover server IDs with `ssh-mcp servers`.
 
+## Version Guard — read this first
+
+This guide matches the CLI version in the frontmatter. Before relying on the reference:
+
+1. Run `ssh-mcp --version`. If it differs from the version above, this copy may be outdated.
+2. Refresh it from the installed binary: `ssh-mcp skill > <this-skill-dir>/SKILL.md` (the command prints the version-matched guide shipped inside the package).
+3. Or verify specifics live: every command supports `--help`, and unknown commands/flags will error rather than silently misbehave.
+
 ## Agent Guidance
 
 ### Key Principles

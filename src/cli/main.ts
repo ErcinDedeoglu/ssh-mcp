@@ -8,6 +8,7 @@ import { registerTransferCommands } from './commands/transfer.js';
 import { registerConnectionCommands } from './commands/connection.js';
 import { registerForwardCommands } from './commands/forward.js';
 import { registerUpdateCommand, notifyUpdate } from './commands/update.js';
+import { registerSkillCommand } from './commands/skill.js';
 import { maybeAutoUpdate, shouldSkipAutoUpdate } from './auto-update.js';
 import { runJob } from './job-runner.js';
 
@@ -38,6 +39,7 @@ export async function runCli(argv: string[]): Promise<number> {
   registerForwardCommands(program);
   registerJobCommand(program);
   registerUpdateCommand(program);
+  registerSkillCommand(program);
 
   program
     .command('mcp', { hidden: true })

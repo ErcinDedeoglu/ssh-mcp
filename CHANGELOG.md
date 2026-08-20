@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ssh-mcp skill` command: prints the version-matched agent skill file; frontmatter version auto-injected from package.json
+- Skill ships in the npm tarball and carries a Version Guard (refresh instructions)
 - Project-level config overlay: `.ssh-mcp.json` discovered walking up from CWD,
   merges over central config (servers by id, keys, defaults); 0600 enforced;
   disabled by explicit --config/SSH_MCP_CONFIG; runtime state stays central
