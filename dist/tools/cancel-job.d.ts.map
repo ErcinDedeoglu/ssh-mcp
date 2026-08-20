@@ -1,0 +1,1 @@
+{"version":3,"file":"cancel-job.d.ts","sourceRoot":"","sources":["../../src/tools/cancel-job.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AACzE,OAAO,EAAE,WAAW,EAAE,MAAM,wBAAwB,CAAC;AACrD,OAAO,EAAE,aAAa,EAAE,MAAM,0BAA0B,CAAC;AAKzD,wBAAgB,qBAAqB,CACnC,MAAM,EAAE,SAAS,EACjB,WAAW,EAAE,WAAW,EACxB,aAAa,EAAE,aAAa,GAC3B,IAAI,CAaN"}
