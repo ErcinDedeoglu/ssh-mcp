@@ -1,0 +1,1 @@
+{"version":3,"file":"disconnect.d.ts","sourceRoot":"","sources":["../../src/tools/disconnect.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AACzE,OAAO,EAAE,cAAc,EAAE,MAAM,gBAAgB,CAAC;AAChD,OAAO,EAAE,aAAa,EAAE,MAAM,0BAA0B,CAAC;AAKzD,wBAAgB,sBAAsB,CACpC,MAAM,EAAE,SAAS,EACjB,IAAI,EAAE,cAAc,EACpB,aAAa,EAAE,aAAa,GAC3B,IAAI,CAWN"}
