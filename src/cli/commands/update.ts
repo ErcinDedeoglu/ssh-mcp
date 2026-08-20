@@ -1,12 +1,30 @@
 import type { Command } from 'commander';
+import { Option } from 'commander';
 import { checkForUpdate, selfUpdate } from '../updater.js';
+import { stateFilePath, writeAutoUpdateState } from '../auto-update.js';
 
 export function registerUpdateCommand(program: Command): void {
   const update = program
     .command('update')
-    .description('Update ssh-mcp-cli to the latest version from npm');
+    .description('Update ssh-mcp-cli to the latest version from npm')
+    .addOption(new Option('--auto', 'internal: silent background auto-update').hideHelp());
 
-  update.action(async () => {
+  update.action(async (options: { auto?: boolean }) => {
+    if (options.auto) {
+      // Detached child of maybeAutoUpdate(): fully silent, records errors to state
+      try {
+        await selfUpdate();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        writeAutoUpdateState(stateFilePath(), {
+          lastCheckAt: Date.now(),
+          lastError: message,
+        });
+        process.exitCode = 1;
+      }
+      return;
+    }
+
     const json = update.optsWithGlobals().json as boolean;
 
     try {

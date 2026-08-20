@@ -11,6 +11,11 @@ vi.mock('../../../src/cli/updater.js', () => ({
   selfUpdate: checkForUpdateMock,
 }));
 
+vi.mock('../../../src/cli/auto-update.js', () => ({
+  maybeAutoUpdate: vi.fn(async () => 'skipped:current'),
+  shouldSkipAutoUpdate: () => true,
+}));
+
 const ENTRY = path.resolve('dist/index.js');
 
 interface SpawnResult {
@@ -22,7 +27,11 @@ interface SpawnResult {
 function runEntry(args: string[]): Promise<SpawnResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [ENTRY, ...args], {
-      env: { ...process.env, SSH_MCP_CONFIG: '/nonexistent/config.json' },
+      env: {
+        ...process.env,
+        SSH_MCP_CONFIG: '/nonexistent/config.json',
+        SSH_MCP_AUTO_UPDATE: '0',
+      },
     });
     let stdout = '';
     let stderr = '';

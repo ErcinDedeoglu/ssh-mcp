@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Git-based install support:  (prepare script now builds dist/ on install)
 
+## [1.3.0] - 2026-08-20
+
+### Added
+
+- Forced background auto-update: 24h-throttled registry check, detached silent install, never blocks commands
+- Opt-out via SSH_MCP_AUTO_UPDATE=0; skipped for mcp/run-job/--json
+
 ## [1.1.4] - 2026-08-20
 
 ### Fixed

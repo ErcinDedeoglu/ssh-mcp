@@ -24,6 +24,15 @@ ssh-mcp --help
 
 Works with any package manager (`bun add -g ssh-mcp-cli`, `pnpm add -g ssh-mcp-cli`, `yarn global add ssh-mcp-cli`) and one-shot via `npx ssh-mcp-cli servers`.
 
+### Auto-update
+
+The CLI keeps itself current automatically: at most once per 24h it checks the npm registry in the background and, when a newer version exists, installs it via a detached process. The running command is never blocked or modified - the next invocation uses the new version.
+
+- Opt out: `export SSH_MCP_AUTO_UPDATE=0` (also `false`/`no`/`off`)
+- Never triggers in MCP server mode, background job runners, or `--json` invocations
+- Check state: `~/.ssh-mcp/update-state.json` (next to your config)
+- Manual update anytime: `ssh-mcp update`
+
 Alternative while offline from npm - install from GitHub (release tags ship prebuilt `dist/`, no build scripts run):
 
 ```bash

@@ -37,6 +37,11 @@ describe('Entry Point (index.ts)', () => {
       })),
     }));
 
+    vi.doMock('../../src/cli/auto-update.js', () => ({
+      maybeAutoUpdate: vi.fn(async () => 'skipped:current' as const),
+      shouldSkipAutoUpdate: () => true,
+    }));
+
     vi.spyOn(process, 'on').mockImplementation(
       (event: string | symbol, handler: (...args: unknown[]) => void) => {
         if (event === 'SIGINT' || event === 'SIGTERM') {

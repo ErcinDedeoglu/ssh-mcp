@@ -24,7 +24,7 @@ export function cliEntry(): string {
 export function runCli(args: string[], timeoutMs = 60000): Promise<CliResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [cliEntry(), ...args], {
-      env: { ...process.env, SSH_MCP_CONFIG: getShardConfigPath() },
+      env: { ...process.env, SSH_MCP_CONFIG: getShardConfigPath(), SSH_MCP_AUTO_UPDATE: '0' },
     });
     let stdout = '';
     let stderr = '';
@@ -48,7 +48,7 @@ export function runCli(args: string[], timeoutMs = 60000): Promise<CliResult> {
 /** Spawns a long-running CLI process (e.g. foreground forward). */
 export function spawnCli(args: string[]): ChildProcess {
   return spawn(process.execPath, [cliEntry(), ...args], {
-    env: { ...process.env, SSH_MCP_CONFIG: getShardConfigPath() },
+    env: { ...process.env, SSH_MCP_CONFIG: getShardConfigPath(), SSH_MCP_AUTO_UPDATE: '0' },
   });
 }
 

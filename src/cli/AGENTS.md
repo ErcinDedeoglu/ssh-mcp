@@ -17,6 +17,7 @@ Commander-based CLI. One-shot per invocation (no daemon): each command builds `A
 | `output.ts`       | `report()`: prints ActionOutcome, returns exit code                |
 | `job-launch.ts`   | `launchBackgroundJob()`: spawns detached runner child              |
 | `job-runner.ts`   | `runJob()`: the runner child - executes, streams to JobStore       |
+| `auto-update.ts`  | Forced background auto-update: 24h throttle, detached `update --auto` spawn, state in `update-state.json` |
 | `forward-store.ts`| CLI forward tracking (`<config-dir>/forwards.json`, pid liveness)  |
 | `commands/`       | One file per command family (exec, job, transfer, connection, forward) |
 
