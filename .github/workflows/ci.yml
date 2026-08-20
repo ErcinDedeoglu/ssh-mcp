@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+
+  unit:
+    name: Unit (${{ matrix.os }}, node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: npm run build
+      - run: npm test
+
+  e2e:
+    name: E2E (docker SSH, ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - name: Run E2E shard
+        env:
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          docker compose -f docker-compose.test.yml up -d --wait
+          TEST_SHARD_INDEX=${{ matrix.shard }} SKIP_DOCKER_SETUP=1 \
+            SSH_MCP_AUTO_UPDATE=0 \
+            npx vitest run --config vitest.config.e2e.ts \
+            --shard=${{ matrix.shard }}/${{ strategy.job-total }} || \
+            (docker compose -f docker-compose.test.yml down && exit 1)
+          docker compose -f docker-compose.test.yml down
