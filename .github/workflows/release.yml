@@ -34,7 +34,10 @@ jobs:
       - run: npm install
       # Tag snapshots carry prebuilt dist/ - build only as a safety net
       - run: npm run build
-      - name: Publish
+      - name: Publish (trusted publishing, OIDC)
+        env:
+          # Ensure no token auth shadows the OIDC handshake
+          NODE_AUTH_TOKEN: ''
         run: npm publish --access public
       - name: Create GitHub release
         run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
