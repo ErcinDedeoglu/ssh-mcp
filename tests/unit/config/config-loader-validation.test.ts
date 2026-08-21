@@ -36,11 +36,12 @@ describe('ConfigLoader validation errors', () => {
     expect(() => loadConfig()).toThrow(/schema validation failed/i);
   });
 
-  it('throws on schema validation failure - empty servers array', () => {
-    const invalidConfig = { servers: [] };
-    writeConfigFile(ctx.configPath, invalidConfig);
+  it('accepts an empty servers array (valid since zero-server configs)', () => {
+    const validConfig = { servers: [] };
+    writeConfigFile(ctx.configPath, validConfig);
 
-    expect(() => loadConfig()).toThrow(/schema validation failed/i);
+    const config = loadConfig();
+    expect(config.servers).toEqual([]);
   });
 
   it('throws on schema validation failure - invalid server id pattern', () => {

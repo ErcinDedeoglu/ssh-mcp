@@ -1,5 +1,6 @@
 // ConfigLoader tests: basic loading, path expansion, and auth type configurations.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import * as fs from 'node:fs';
 import type { Config } from '../../../src/config/types.js';
 import { loadConfig } from '../../../src/config/loader.js';
 import {
@@ -34,8 +35,15 @@ describe('ConfigLoader basic loading', () => {
     expect(config.servers[0].id).toBe('test-server');
   });
 
-  it('throws on missing config file', () => {
-    expect(() => loadConfig()).toThrow('Config file not found');
+  it('creates an empty template (no example servers) on first run', () => {
+    const config = loadConfig();
+
+    expect(config.servers).toEqual([]);
+    const written = JSON.parse(fs.readFileSync(ctx.configPath, 'utf-8'));
+    expect(written.servers).toEqual([]);
+    // No phantom example server anywhere in the template
+    expect(JSON.stringify(written)).not.toContain('example.com');
+    expect(JSON.stringify(written)).not.toContain('my-server');
   });
 
   it('expands ~ in config path', () => {

@@ -12,25 +12,10 @@ function getSchemaPath(): string {
 const GROUP_AND_OTHERS_PERMISSION_MASK = 0o077;
 
 const CONFIG_TEMPLATE = {
-  _comment: 'SSH-MCP Configuration - Edit this file and restart. Delete _comment fields.',
-  keys: {
-    _comment: 'Define SSH keys here, reference by name in servers below',
-    'my-key':
-      '-----BEGIN OPENSSH PRIVATE KEY-----\n...paste your key here...\n-----END OPENSSH PRIVATE KEY-----',
-  },
-  servers: [
-    {
-      _comment: 'Example server - duplicate and modify for your servers',
-      id: 'my-server',
-      host: 'example.com',
-      port: 22,
-      username: 'ubuntu',
-      auth: {
-        privateKey: 'my-key',
-      },
-      description: 'My example server',
-    },
-  ],
+  _comment:
+    'SSH-MCP configuration - add your servers below, then delete the _comment fields. Keep this file at 0600 (chmod 600).',
+  keys: {},
+  servers: [],
   defaults: {
     timeouts: {
       connection: 10,
@@ -90,9 +75,9 @@ function loadSingleConfig(configPath: string, options: { createTemplate: boolean
   if (!fs.existsSync(configPath)) {
     if (options.createTemplate) {
       createTemplateConfig(configPath);
-      throw new Error(
-        `Config file not found. Created template at ${configPath} - edit it with your servers and restart.`,
-      );
+      // Fresh install: return the (empty) template config so commands can
+      // render a helpful empty state instead of crashing
+      return { ...CONFIG_TEMPLATE } as unknown as Config;
     }
     throw new Error(`Config file not found: ${configPath}`);
   }

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- No example server on first run: template config is an empty skeleton (zero
+  servers); 'servers' prints a helpful empty state with a sample entry instead
+- Central config now accepts zero servers (schema minItems dropped)
 - Single-file bundled npm package: zero runtime dependencies, no install
   scripts, no npm 12 allow-scripts warnings, ~330kB tarball, sub-second installs
 

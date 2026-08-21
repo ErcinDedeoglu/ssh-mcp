@@ -4,15 +4,17 @@
   "title": "SSH MCP Server Configuration",
   "description": "Configuration schema for SSH MCP server defining remote SSH connections and security settings",
   "type": "object",
-  "required": ["servers"],
+  "required": [
+    "servers"
+  ],
   "properties": {
     "servers": {
       "type": "array",
       "description": "List of SSH server configurations. Each server can be accessed via MCP tools.",
-      "minItems": 1,
       "items": {
         "$ref": "#/definitions/server"
-      }
+      },
+      "default": []
     },
     "keys": {
       "type": "object",
@@ -46,7 +48,13 @@
     "server": {
       "type": "object",
       "description": "SSH server connection configuration",
-      "required": ["id", "host", "port", "username", "auth"],
+      "required": [
+        "id",
+        "host",
+        "port",
+        "username",
+        "auth"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -54,13 +62,21 @@
           "pattern": "^[a-zA-Z0-9._-]+$",
           "minLength": 1,
           "maxLength": 64,
-          "examples": ["prod-web-01", "dev-db", "staging-api"]
+          "examples": [
+            "prod-web-01",
+            "dev-db",
+            "staging-api"
+          ]
         },
         "host": {
           "type": "string",
           "description": "Hostname or IP address of the SSH server",
           "minLength": 1,
-          "examples": ["192.168.1.100", "server.example.com", "ssh.internal.corp"]
+          "examples": [
+            "192.168.1.100",
+            "server.example.com",
+            "ssh.internal.corp"
+          ]
         },
         "port": {
           "type": "integer",
@@ -73,14 +89,20 @@
           "type": "string",
           "description": "SSH username for authentication",
           "minLength": 1,
-          "examples": ["ubuntu", "admin", "deploy"]
+          "examples": [
+            "ubuntu",
+            "admin",
+            "deploy"
+          ]
         },
         "auth": {
           "type": "object",
           "description": "Authentication method: password or privateKey (mutually exclusive)",
           "oneOf": [
             {
-              "required": ["password"],
+              "required": [
+                "password"
+              ],
               "properties": {
                 "password": {
                   "type": "string",
@@ -91,7 +113,9 @@
               "additionalProperties": false
             },
             {
-              "required": ["privateKey"],
+              "required": [
+                "privateKey"
+              ],
               "properties": {
                 "privateKey": {
                   "type": "string",
@@ -122,12 +146,20 @@
         "description": {
           "type": "string",
           "description": "Optional human-readable description of this server",
-          "examples": ["Production web server", "Development database"]
+          "examples": [
+            "Production web server",
+            "Development database"
+          ]
         },
         "shell": {
           "type": "string",
           "description": "Remote shell type. 'auto' (default) detects the shell from the initial prompt. Use 'powershell' for Windows PowerShell, 'cmd' for Windows cmd.exe, or 'posix' for bash/sh/zsh to skip auto-detection.",
-          "enum": ["auto", "posix", "powershell", "cmd"],
+          "enum": [
+            "auto",
+            "posix",
+            "powershell",
+            "cmd"
+          ],
           "default": "auto"
         },
         "agentForward": {

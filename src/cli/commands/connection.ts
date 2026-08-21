@@ -16,13 +16,30 @@ export function registerConnectionCommands(program: Command): void {
       const json = servers.optsWithGlobals().json as boolean;
       const outcome = await listServers(deps);
       process.exitCode = report(outcome, json, (data) => {
-        for (const s of data as Array<{
+        const list = data as Array<{
           id: string;
           host: string;
           port: number;
           username: string;
           connected: boolean;
-        }>) {
+        }>;
+        if (list.length === 0) {
+          const configPath = process.env.SSH_MCP_CONFIG ?? '~/.ssh-mcp/config.json';
+          console.log('No servers configured.');
+          console.log(`Add one to ${configPath}, e.g.:`);
+          console.log(
+            '  ' +
+              JSON.stringify({
+                id: 'prod',
+                host: '203.0.113.10',
+                port: 22,
+                username: 'ubuntu',
+                auth: { password: '...' },
+              }),
+          );
+          return;
+        }
+        for (const s of list) {
           const state = s.connected ? 'connected' : '-';
           console.log(`${s.id.padEnd(20)} ${s.username}@${s.host}:${s.port}  [${state}]`);
         }
