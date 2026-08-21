@@ -1,0 +1,32 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="edge" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#58a6ff"/>
+      <stop offset="100%" stop-color="#3fb950"/>
+    </linearGradient>
+    <linearGradient id="chev" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3fb950"/>
+      <stop offset="100%" stop-color="#2ea043"/>
+    </linearGradient>
+    <linearGradient id="cur" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#58a6ff"/>
+      <stop offset="100%" stop-color="#388bfd"/>
+    </linearGradient>
+  </defs>
+
+  <!-- terminal tile -->
+  <rect x="16" y="16" width="480" height="480" rx="110" fill="#0d1117" stroke="url(#edge)" stroke-width="10"/>
+
+  <!-- window dots -->
+  <circle cx="96" cy="88" r="11" fill="#ff5f57"/>
+  <circle cx="132" cy="88" r="11" fill="#febc2e"/>
+  <circle cx="168" cy="88" r="11" fill="#28c840"/>
+
+  <!-- prompt chevron > -->
+  <path d="M 140 170 L 268 256 L 140 342"
+        fill="none" stroke="url(#chev)" stroke-width="46"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- cursor _ -->
+  <rect x="308" y="316" width="88" height="46" rx="23" fill="url(#cur)"/>
+</svg>

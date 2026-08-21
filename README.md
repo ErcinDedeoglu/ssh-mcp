@@ -1,4 +1,6 @@
-# ssh-mcp
+<div align="center">
+
+<img src="docs/logo-horizontal.png" alt="ssh-mcp" width="640">
 
 **SSH for AI agents and humans.** Define your servers once — use them from any MCP client *or* directly from your terminal. One binary, one config, persistent shells, background jobs, tunnels, and it keeps itself updated.
 
@@ -6,6 +8,8 @@
 [![npm](https://img.shields.io/npm/v/ssh-mcp-cli)](https://www.npmjs.com/package/ssh-mcp-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-339933)](package.json)
+
+</div>
 
 ```text
 $ ssh-mcp exec prod-web "uptime && df -h / | tail -1"
