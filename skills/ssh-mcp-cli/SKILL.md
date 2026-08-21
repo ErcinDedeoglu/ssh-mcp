@@ -1,6 +1,6 @@
 ---
 name: ssh-mcp-cli
-version: 1.4.3
+version: 1.6.2
 description: ssh-mcp CLI — MUST USE when the user mentions SSH, ssh-mcp, remote servers, or asks to run commands on, upload/download files to, check status of, or port-forward to remote/server machines via the ssh-mcp tool. Covers exec (foreground + background jobs), SFTP transfers, connection status, jump hosts, port forwarding, and server config discovery.
 requires:
   bins: ["ssh-mcp"]
@@ -95,6 +95,25 @@ Poll every 10-30s (not in a tight loop). Jobs survive the CLI exiting; `msSinceL
 - Central: `~/.ssh-mcp/config.json` (0600 enforced). Project overlay: `.ssh-mcp.json` walked up from CWD — servers override by id, keys/defaults merge; disabled when config is pinned.
 - Auth options per server: `{ "password": "..." }`, `{ "privateKey": "alias-or-path-or-inline-PEM" }` (`keys` aliases may point to file paths), `{ "agent": true }` (SSH agent; not macOS Keychain).
 - `SSH_MCP_CONFIG=<path>` env or `--config <path>` pin the config explicitly.
+
+### Adding a project config (`.ssh-mcp.json`)
+
+When the working project needs its own servers (or different credentials than central), create `.ssh-mcp.json` in the repo root:
+
+```json
+{
+  "servers": [
+    { "id": "staging", "host": "10.0.0.9", "port": 22,
+      "username": "deploy", "auth": { "privateKey": "~/.ssh/staging_key" } }
+  ]
+}
+```
+
+Rules:
+- Same schema as central; servers override central entries with the same `id`, new ids are added
+- Git-tracked is fine (0644 allowed; no group/other WRITE) — but if it contains passwords or inline keys, it belongs in `.gitignore` (private repo + deliberate choice, otherwise)
+- Prefer machine-local keys (`~/.ssh/...` paths or `{ "agent": true }`) so no secrets are committed
+- Takes effect on the next command — no restart, no env vars; verify with `ssh-mcp servers`
 - One-shot per invocation: no cwd/env persistence between `exec` calls. Chain with `&&` in one quoted command when state matters.
 - Self-updates automatically at most once/24h (background, never blocks). Opt out: `SSH_MCP_AUTO_UPDATE=0`. State: `~/.ssh-mcp/update-state.json`.
 - No `ssh-mcp` binary? `npm install -g ssh-mcp-cli` (package name differs from bin name).
