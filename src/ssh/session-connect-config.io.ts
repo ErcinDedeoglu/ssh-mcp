@@ -3,7 +3,8 @@ import * as fs from 'node:fs';
 import type { Duplex } from 'node:stream';
 import type { ConnectConfig } from 'ssh2';
 import type { ServerConfig } from '../config/types.js';
-import { isPasswordAuth, isPrivateKeyAuth } from '../config/types.js';
+import { isPasswordAuth, isPrivateKeyAuth, isAgentAuth } from '../config/types.js';
+import { expandHome } from '../config/path.js';
 import {
   DEFAULT_CONNECTION_TIMEOUT_SECONDS,
   MS_PER_SECOND,
@@ -22,7 +23,7 @@ function resolvePrivateKey(keyValue: string, keys?: Record<string, string>): str
   if (keys && keyValue in keys) {
     return resolvePrivateKey(keys[keyValue], keys);
   }
-  return fs.readFileSync(keyValue, 'utf-8');
+  return fs.readFileSync(expandHome(keyValue), 'utf-8');
 }
 
 export function buildSshConnectConfig(
@@ -61,6 +62,17 @@ export function buildSshConnectConfig(
       privateKey: privateKeyContent,
       passphrase: serverConfig.auth.passphrase,
     };
+  }
+
+  if (isAgentAuth(serverConfig.auth)) {
+    if (!agentSocketPath) {
+      throw new Error(
+        `SSH agent authentication configured for '${serverConfig.id}' but SSH_AUTH_SOCK is not set. ` +
+          'Start an agent (ssh-agent, 1Password, macOS Keychain) or switch this server to key/password auth.',
+      );
+    }
+    // Agent already attached in baseConfig; ssh2 offers the agent's loaded keys
+    return { ...baseConfig, agent: agentSocketPath, agentForward: false };
   }
 
   throw new Error('Invalid authentication configuration');

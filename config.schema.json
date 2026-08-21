@@ -134,6 +134,19 @@
                 }
               },
               "additionalProperties": false
+            },
+            {
+              "required": [
+                "agent"
+              ],
+              "properties": {
+                "agent": {
+                  "type": "boolean",
+                  "enum": [true],
+                  "description": "Use SSH agent authentication (ssh-agent, 1Password, macOS Keychain - anything exposing SSH_AUTH_SOCK). No secrets stored in this config."
+                }
+              },
+              "additionalProperties": false
             }
           ]
         },

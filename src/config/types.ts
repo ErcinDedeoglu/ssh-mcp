@@ -44,9 +44,19 @@ export interface PrivateKeyAuth {
 }
 
 /**
- * Authentication method: either password or private key (mutually exclusive)
+ * SSH-agent authentication: use any key loaded in the local agent
+ * (ssh-agent, 1Password, macOS Keychain via SSH_AUTH_SOCK). No secrets
+ * in the config file at all.
  */
-export type Auth = PasswordAuth | PrivateKeyAuth;
+export interface AgentAuth {
+  /** Must be true (marks this auth variant) */
+  agent: true;
+}
+
+/**
+ * Authentication method: password, private key, or SSH agent (mutually exclusive)
+ */
+export type Auth = PasswordAuth | PrivateKeyAuth | AgentAuth;
 
 /**
  * Remote shell type for prompt detection and command wrapping.
@@ -118,4 +128,11 @@ export function isPasswordAuth(auth: Auth): auth is PasswordAuth {
  */
 export function isPrivateKeyAuth(auth: Auth): auth is PrivateKeyAuth {
   return 'privateKey' in auth;
+}
+
+/**
+ * Type guard to check if auth is SSH-agent-based
+ */
+export function isAgentAuth(auth: Auth): auth is AgentAuth {
+  return 'agent' in auth;
 }

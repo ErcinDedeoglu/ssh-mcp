@@ -115,6 +115,17 @@ Notes:
 
 ### Config file format
 
+Authentication options per server (pick one):
+
+| Auth | Config | Best for |
+|---|---|---|
+| Password | `"auth": { "password": "..." }` | Quick setups, throwaway boxes |
+| Inline key | `"auth": { "privateKey": "main-key" }` (alias into `keys`) | Portable config, one file |
+| **Key from your machine** | `"auth": { "privateKey": "~/.ssh/id_ed25519" }` | Keys stay where they are; `~` supported |
+| **SSH agent** | `"auth": { "agent": true }` | Zero secrets in config; works with ssh-agent, 1Password, Vault, gpg-agent |
+
+> **macOS Keychain note:** Apple's Secure Keychain agent (`SSH_AUTH_SOCK` via launchd) rejects signing requests from Node's ssh2 library — if that's your only agent, use the key-file option instead. Standard agents work fine.
+
 ```json
 {
   "keys": {
@@ -151,6 +162,14 @@ Notes:
       },
       "agentForward": true,
       "description": "Dev database (key from file, agent forwarding enabled)"
+    },
+    {
+      "id": "bastion",
+      "host": "10.0.0.1",
+      "port": 22,
+      "username": "ops",
+      "auth": { "agent": true },
+      "description": "SSH agent auth - no secrets in this file"
     }
   ],
   "defaults": {

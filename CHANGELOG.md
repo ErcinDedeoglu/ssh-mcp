@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New auth options: `"auth": { "agent": true }` (SSH agent / 1Password / Vault -
+  zero secrets in config) and `~` expansion for key file paths
+  (`"privateKey": "~/.ssh/id_ed25519"`). Known caveat: macOS Secure Keychain
+  agent is incompatible with Node ssh2; use key files there.
 - `ssh-mcp skill` command: prints the version-matched agent skill file; frontmatter version auto-injected from package.json
 - Skill ships in the npm tarball and carries a Version Guard (refresh instructions)
 - Project-level config overlay: `.ssh-mcp.json` discovered walking up from CWD,

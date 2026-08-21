@@ -1,4 +1,6 @@
 import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSshConnectConfig } from '../../../src/ssh/session-connect-config.io.js';
 import type { ServerConfig } from '../../../src/config/types.js';
@@ -99,7 +101,11 @@ describe('buildSshConnectConfig - privateKey detection', () => {
         const config = createServerConfig({ privateKey: keyPath });
         buildSshConnectConfig(config, mockOptions);
 
-        expect(fs.readFileSync).toHaveBeenCalledWith(keyPath, 'utf-8');
+        // ~-prefixed paths are home-expanded before hitting the disk
+        const expectedDiskPath = keyPath.startsWith('~/')
+          ? path.join(os.homedir(), keyPath.slice(1))
+          : keyPath;
+        expect(fs.readFileSync).toHaveBeenCalledWith(expectedDiskPath, 'utf-8');
       });
     });
   });
