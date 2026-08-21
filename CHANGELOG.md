@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Project configs (.ssh-mcp.json) may be git-tracked: permission check
+  relaxes to no group/other WRITE (0644 after checkout is fine);
+  central config still requires 0600
 - No example server on first run: template config is an empty skeleton (zero
   servers); 'servers' prints a helpful empty state with a sample entry instead
 - Central config now accepts zero servers (schema minItems dropped)

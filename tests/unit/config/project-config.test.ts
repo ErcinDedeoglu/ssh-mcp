@@ -131,12 +131,14 @@ describe('project config merge (loader.ts)', () => {
     expect(config.servers.map((s) => s.id)).toEqual(['a']);
   });
 
-  it('enforces 0600 on the project file too', () => {
+  it('accepts a 0644 project file (git-tracked) but rejects group/other write', () => {
     writeCentral([
       { id: 'a', host: 'a.example', port: 22, username: 'u', auth: { password: 'p' } },
     ]);
     const proj = path.join(root, 'proj5');
     fs.mkdirSync(proj);
+
+    // 0644: what git checkouts produce - must load fine
     writeProject(
       proj,
       {
@@ -144,8 +146,27 @@ describe('project config merge (loader.ts)', () => {
       },
       0o644,
     );
+    const config = loadConfig({ startDir: proj });
+    expect(config.servers.map((s) => s.id)).toContain('x');
 
+    // 0666/0646: group/other WRITABLE - must throw
+    writeProject(
+      proj,
+      {
+        servers: [{ id: 'x', host: 'x.example', port: 22, username: 'u', auth: { password: 'p' } }],
+      },
+      0o666,
+    );
     expect(() => loadConfig({ startDir: proj })).toThrow(/Insecure file permissions/);
+  });
+
+  it('still enforces 0600 on the central config', () => {
+    const central = writeCentral([
+      { id: 'a', host: 'a.example', port: 22, username: 'u', auth: { password: 'p' } },
+    ]);
+    fs.chmodSync(central, 0o644);
+
+    expect(() => loadConfig()).toThrow(/Insecure file permissions/);
   });
 
   it('surfaces invalid project JSON with the file path', () => {

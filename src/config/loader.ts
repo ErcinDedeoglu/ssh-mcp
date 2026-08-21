@@ -35,20 +35,30 @@ function createTemplateConfig(configPath: string): void {
   fs.writeFileSync(configPath, content, { mode: 0o600 });
 }
 
-function checkPermissions(filePath: string): void {
+const GROUP_AND_OTHERS_WRITE_MASK = 0o022;
+
+function checkPermissions(filePath: string, options: { strict?: boolean } = {}): void {
+  const strict = options.strict ?? true;
   if (process.platform === 'win32') {
     return;
   }
 
   const stats = fs.statSync(filePath);
   const mode = stats.mode & 0o777;
-  const hasGroupOrOthersAccess = (mode & GROUP_AND_OTHERS_PERMISSION_MASK) !== 0;
 
-  if (hasGroupOrOthersAccess) {
+  // Central config holds credentials outside any trust boundary: require 0600.
+  // Project configs may be tracked in git, where 0600 is unrepresentable
+  // (clones/checkouts yield 0644) - enforce no group/other WRITE instead;
+  // read access to content already in git history adds no exposure.
+  const violation = strict
+    ? (mode & GROUP_AND_OTHERS_PERMISSION_MASK) !== 0
+    : (mode & GROUP_AND_OTHERS_WRITE_MASK) !== 0;
+
+  if (violation) {
     throw new Error(
       `Insecure file permissions on ${filePath}. ` +
-        `Expected 0600 or stricter, got ${mode.toString(8).padStart(4, '0')}. ` +
-        `Run: chmod 600 ${filePath}`,
+        `Expected ${strict ? '0600' : 'no group/other write (0644 ok)'} or stricter, got ${mode.toString(8).padStart(4, '0')}. ` +
+        `Run: chmod ${strict ? '600' : '644'} ${filePath}`,
     );
   }
 }
@@ -82,7 +92,8 @@ function loadSingleConfig(configPath: string, options: { createTemplate: boolean
     throw new Error(`Config file not found: ${configPath}`);
   }
 
-  checkPermissions(configPath);
+  // Project configs may be git-tracked (0644 after checkout): non-strict mode
+  checkPermissions(configPath, { strict: options.createTemplate });
 
   let rawConfig: unknown;
   try {
