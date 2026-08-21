@@ -194,6 +194,22 @@ The `privateKey` field auto-detects format:
 
 Use the `keys` section to define a key once and reference it by alias across multiple servers.
 
+**Aliases can point to files too** — not just inline PEM. This keeps key material out of the config file entirely while still using the short name everywhere:
+
+```json
+{
+  "keys": {
+    "dublok": "/Users/you/Keys/exported_id_rsa"
+  },
+  "servers": [
+    { "id": "neo", "host": "10.0.0.1", "port": 22, "username": "root",
+      "auth": { "privateKey": "dublok" } }
+  ]
+}
+```
+
+All three styles can be mixed in one config: aliases (to paths or PEM), direct paths, and inline PEM. This is especially useful for project-level `.ssh-mcp.json` in private repos — the config references keys that live on your machine, so no key material is committed.
+
 ### SSH Agent Forwarding
 
 Agent forwarding lets you use your local SSH keys on remote servers (e.g., for git with private repos).

@@ -93,6 +93,7 @@ Poll every 10-30s (not in a tight loop). Jobs survive the CLI exiting; `msSinceL
 ### Config Facts
 
 - Central: `~/.ssh-mcp/config.json` (0600 enforced). Project overlay: `.ssh-mcp.json` walked up from CWD — servers override by id, keys/defaults merge; disabled when config is pinned.
+- Auth options per server: `{ "password": "..." }`, `{ "privateKey": "alias-or-path-or-inline-PEM" }` (`keys` aliases may point to file paths), `{ "agent": true }` (SSH agent; not macOS Keychain).
 - `SSH_MCP_CONFIG=<path>` env or `--config <path>` pin the config explicitly.
 - One-shot per invocation: no cwd/env persistence between `exec` calls. Chain with `&&` in one quoted command when state matters.
 - Self-updates automatically at most once/24h (background, never blocks). Opt out: `SSH_MCP_AUTO_UPDATE=0`. State: `~/.ssh-mcp/update-state.json`.

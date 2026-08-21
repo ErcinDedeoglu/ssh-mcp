@@ -26,8 +26,10 @@
       },
       "examples": [
         {
-          "main-key": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
-          "backup-key": "~/.ssh/id_rsa_backup"
+          "deploy-key": "-----BEGIN OPENSSH PRIVATE KEY-----\\n...\\n-----END OPENSSH PRIVATE KEY-----"
+        },
+        {
+          "dublok": "/Users/you/Keys/exported_id_rsa"
         }
       ]
     },
@@ -119,7 +121,7 @@
               "properties": {
                 "privateKey": {
                   "type": "string",
-                  "description": "SSH private key. Auto-detected format: (1) inline PEM if starts with '-----BEGIN', (2) alias if matches a key name in top-level 'keys' section, (3) file path otherwise.",
+                  "description": "SSH private key. Auto-detected: (1) inline PEM if starts with '-----BEGIN', (2) alias into top-level 'keys' (aliases may hold inline PEM OR file paths), (3) file path otherwise (~ expanded).",
                   "minLength": 1,
                   "examples": [
                     "/home/user/.ssh/id_rsa",
@@ -142,7 +144,9 @@
               "properties": {
                 "agent": {
                   "type": "boolean",
-                  "enum": [true],
+                  "enum": [
+                    true
+                  ],
                   "description": "Use SSH agent authentication (ssh-agent, 1Password, macOS Keychain - anything exposing SSH_AUTH_SOCK). No secrets stored in this config."
                 }
               },
