@@ -1,6 +1,40 @@
 # ssh-mcp
 
-MCP server and CLI for SSH connection management and command execution. Define your servers once, use them from AI assistants or your terminal.
+**SSH for AI agents and humans.** Define your servers once — use them from any MCP client *or* directly from your terminal. One binary, one config, persistent shells, background jobs, tunnels, and it keeps itself updated.
+
+[![CI](https://github.com/ErcinDedeoglu/ssh-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ErcinDedeoglu/ssh-mcp/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/ssh-mcp-cli)](https://www.npmjs.com/package/ssh-mcp-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A522-339933)](package.json)
+
+```text
+$ ssh-mcp exec prod-web "uptime && df -h / | tail -1"
+ 21:42:07 up 34 days,  load average: 0.18 0.22 0.19
+ /dev/vda1       79G   31G   45G  41% /
+
+$ ssh-mcp exec prod-web "npm run build" --bg --stall-timeout 0
+ Job started: job_m9x2k1
+$ ssh-mcp job check job_m9x2k1 --json | jq -r '.result.exitCode'
+ 0
+
+$ ssh-mcp forward prod-db localhost 5432 --local-port 15432 &
+ 127.0.0.1:15432 -> localhost:5432  (Ctrl-C to stop)
+```
+
+## 30-second quickstart
+
+```bash
+npm install -g ssh-mcp-cli          # or: bun add -g ssh-mcp-cli
+ssh-mcp servers                     # first run creates ~/.ssh-mcp/config.json (chmod 600)
+$EDITOR ~/.ssh-mcp/config.json      # add a server (see below)
+ssh-mcp exec my-server uname -a     # done
+```
+
+And for your AI agent (any MCP client):
+
+```json
+{ "mcpServers": { "ssh-mcp": { "command": "npx", "args": ["-y", "ssh-mcp-cli"] } } }
+```
 
 ## Features
 
@@ -222,7 +256,7 @@ Add to `~/.config/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "ssh-mcp": {
       "command": "npx",
-      "args": ["ssh-mcp"]
+      "args": ["-y", "ssh-mcp-cli"]
     }
   }
 }
@@ -235,7 +269,7 @@ With custom config path:
   "mcpServers": {
     "ssh-mcp": {
       "command": "npx",
-      "args": ["ssh-mcp"],
+      "args": ["-y", "ssh-mcp-cli"],
       "env": {
         "SSH_MCP_CONFIG": "~/.config/claude/ssh-mcp.json"
       }
@@ -253,7 +287,7 @@ Add to `~/.config/opencode/opencode.json`:
   "mcp": {
     "ssh-mcp": {
       "type": "local",
-      "command": ["npx", "ssh-mcp"],
+      "command": ["npx", "-y", "ssh-mcp-cli"],
       "environment": {
         "SSH_MCP_CONFIG": "~/.config/opencode/ssh-mcp.json"
       }
