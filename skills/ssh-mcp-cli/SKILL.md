@@ -1,6 +1,6 @@
 ---
 name: ssh-mcp-cli
-version: 1.4.2
+version: 1.4.3
 description: ssh-mcp CLI — MUST USE when the user mentions SSH, ssh-mcp, remote servers, or asks to run commands on, upload/download files to, check status of, or port-forward to remote/server machines via the ssh-mcp tool. Covers exec (foreground + background jobs), SFTP transfers, connection status, jump hosts, port forwarding, and server config discovery.
 requires:
   bins: ["ssh-mcp"]
@@ -18,15 +18,12 @@ This guide is version-matched to the `version:` in the frontmatter. Before relyi
 2. **If they differ, fix both directions:**
    - **Binary newer** (frontmatter < binary): the binary carries the current guide — refresh this file: `ssh-mcp skill > <skill-path>`
    - **Binary older** (frontmatter > binary): bring the binary up first: `ssh-mcp update` — then refresh this file as above.
-3. **Locate `<skill-path>`** — the file you loaded this skill from. If unknown, find every copy and update them all (agents often mirror the same file):
+3. **Locate `<skill-path>`** — the file you loaded this skill from. Skill locations vary by agent (opencode, Claude Code, Cursor, and others each differ), so:
 
-   ```bash
-   ls ~/.config/opencode/skills/ssh-mcp-cli/SKILL.md \
-      ~/.claude/skills/ssh-mcp-cli/SKILL.md 2>/dev/null
-   ssh-mcp skill > <each matching path>
-   ```
-
-   None found? Install a fresh copy: `mkdir -p ~/.config/opencode/skills/ssh-mcp-cli && ssh-mcp skill > ~/.config/opencode/skills/ssh-mcp-cli/SKILL.md`
+   - If you know your agent's skills directory, refresh the copy there: `ssh-mcp skill > <skills-dir>/ssh-mcp-cli/SKILL.md`
+   - If this file was loaded from a path you can determine (session config, skill registry), refresh that exact path
+   - Multiple copies on the machine (agents often mirror the same file)? Refresh them all.
+   - **No copy locatable? Ask the user** which agent/skills directory to install into — do not invent paths.
 4. **`ssh-mcp` binary missing?** `npm install -g ssh-mcp-cli` (package name differs from the `ssh-mcp` bin), then refresh as above.
 5. Stale copies **fail safe**: unknown commands/flags error loudly and every command supports `--help` — so verify anything suspicious against live help instead of trusting the file.
 
