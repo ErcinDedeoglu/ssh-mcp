@@ -1,6 +1,6 @@
 {
   "name": "ssh-mcp-cli",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "description": "Dual-mode SSH automation: MCP server and CLI (exec, transfers, port forwarding, background jobs)",
   "main": "dist/index.js",
   "bin": {
@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/ErcinDedeoglu/ssh-mcp#readme",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/bundle.mjs",
     "test": "vitest --run tests/unit/**",
     "test:watch": "vitest --watch tests/unit/**",
     "test:coverage": "vitest --coverage tests/unit/**",
@@ -40,8 +40,7 @@
     "lint": "eslint 'src/**/*.ts' 'tests/**/*.ts' && prettier --check 'src/**/*.ts' 'tests/**/*.ts' && tsc --noEmit -p tsconfig.eslint.json",
     "lint:fix": "eslint 'src/**/*.ts' 'tests/**/*.ts' --fix && prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
     "typecheck": "tsc --noEmit -p tsconfig.eslint.json",
-    "prepublishOnly": "node scripts/prepublish.mjs",
-    "prepare": "node scripts/prepare.mjs"
+    "prepublishOnly": "node scripts/prepublish.mjs"
   },
   "keywords": [
     "ssh",
@@ -54,25 +53,25 @@
   ],
   "author": "",
   "license": "MIT",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "ajv": "^8.17.1",
-    "commander": "^15.0.0",
-    "ssh2": "^1.17.0",
-    "zod": "^3.24.1"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/node": "^22.10.5",
     "@types/ssh2": "^1.15.1",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
     "@vitest/coverage-v8": "^2.1.8",
+    "ajv": "^8.17.1",
+    "commander": "^15.0.0",
+    "esbuild": "^0.28.2",
     "eslint": "^9.18.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.4.2",
+    "ssh2": "^1.17.0",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "zod": "^3.24.1"
   },
   "lint-staged": {
     "*.ts": [

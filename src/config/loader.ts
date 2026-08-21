@@ -1,14 +1,12 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import type { Config } from './types.js';
 import { getConfigPath, findProjectConfig, hasExplicitConfigOverride } from './path.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { packagePath } from '../utils/pkg-root.js';
 
 function getSchemaPath(): string {
-  return path.resolve(__dirname, '../../config.schema.json');
+  return packagePath('config.schema.json');
 }
 
 const GROUP_AND_OTHERS_PERMISSION_MASK = 0o077;

@@ -1,6 +1,4 @@
 import { readFileSync } from 'node:fs';
-import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { registerExecCommand } from './commands/exec.js';
 import { registerJobCommand } from './commands/job.js';
@@ -11,14 +9,11 @@ import { registerUpdateCommand, notifyUpdate } from './commands/update.js';
 import { registerSkillCommand } from './commands/skill.js';
 import { maybeAutoUpdate, shouldSkipAutoUpdate } from './auto-update.js';
 import { runJob } from './job-runner.js';
+import { packagePath } from '../utils/pkg-root.js';
 
 function resolveVersion(): string {
   try {
-    const pkgPath = path.resolve(
-      path.dirname(fileURLToPath(import.meta.url)),
-      '../../package.json',
-    );
-    return JSON.parse(readFileSync(pkgPath, 'utf-8')).version ?? '0.0.0';
+    return JSON.parse(readFileSync(packagePath('package.json'), 'utf-8')).version ?? '0.0.0';
   } catch {
     return '0.0.0';
   }

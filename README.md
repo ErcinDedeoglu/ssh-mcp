@@ -62,8 +62,7 @@ ssh-mcp --help
 
 Works with any package manager (`bun add -g ssh-mcp-cli`, `pnpm add -g ssh-mcp-cli`, `yarn global add ssh-mcp-cli`) and one-shot via `npx ssh-mcp-cli servers`.
 
-> **npm 12+ note:** npm may warn that install scripts were blocked for `ssh2` / `cpu-features`. That's its security default — ssh-mcp works fine on ssh2's pure-JS fallback. To enable the optional native crypto accelerator:
-> `npm config set allow-scripts[]=ssh2 --location=user && npm config set allow-scripts[]=cpu-features --location=user`
+> **Zero-dependency install:** the npm package ships as a single prebuilt bundle — no dependency install scripts, nothing for npm 12's script policy to warn about, and installs take under a second.
 
 ### Auto-update
 

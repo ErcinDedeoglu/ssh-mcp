@@ -1,23 +1,16 @@
 import type { Command } from 'commander';
 import { readFileSync } from 'node:fs';
-import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const SKILL_RELATIVE_PATH = '../../../skills/ssh-mcp-cli/SKILL.md';
-const PACKAGE_RELATIVE_PATH = '../../../package.json';
+import { packagePath } from '../../utils/pkg-root.js';
 
 export function skillFilePath(): string {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), SKILL_RELATIVE_PATH);
+  return packagePath('skills', 'ssh-mcp-cli', 'SKILL.md');
 }
 
 function resolvePackageVersion(): string {
   try {
-    const pkg = JSON.parse(
-      readFileSync(
-        path.resolve(path.dirname(fileURLToPath(import.meta.url)), PACKAGE_RELATIVE_PATH),
-        'utf-8',
-      ),
-    ) as { version?: string };
+    const pkg = JSON.parse(readFileSync(packagePath('package.json'), 'utf-8')) as {
+      version?: string;
+    };
     return pkg.version ?? '0.0.0';
   } catch {
     return '0.0.0';

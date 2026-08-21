@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { getConfigPath } from '../config/path.js';
 import { checkForUpdate } from './updater.js';
+import { packagePath } from '../utils/pkg-root.js';
 
 const AUTO_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const AUTO_UPDATE_ENV = 'SSH_MCP_AUTO_UPDATE';
@@ -62,7 +62,7 @@ export function shouldSkipAutoUpdate(argv: string[], env: NodeJS.ProcessEnv): bo
 }
 
 function selfEntry(): string {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../index.js');
+  return packagePath('dist', 'index.js');
 }
 
 /**

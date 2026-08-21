@@ -1,8 +1,7 @@
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import * as path from 'node:path';
 import { getConfigPath } from '../config/path.js';
 import { JobStore } from '../ssh/job-store.js';
+import { packagePath } from '../utils/pkg-root.js';
 
 export interface LaunchJobOptions {
   timeout?: number;
@@ -30,7 +29,7 @@ export function launchBackgroundJob(
   });
   store.prune();
 
-  const entry = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../index.js');
+  const entry = packagePath('dist', 'index.js');
   const args: string[] = [entry, 'run-job', jobId, serverId, '--config', getConfigPath()];
   if (options.timeout !== undefined) args.push('--timeout', String(options.timeout));
   if (options.stallTimeout !== undefined) {
